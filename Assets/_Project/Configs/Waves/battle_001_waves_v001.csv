@@ -1,0 +1,4 @@
+wave_id,turn_index,spawn_timing,enemy_slot_1_card_id,enemy_slot_2_card_id,note_key
+WAVE_001,1,AfterPlayerEndTurn,CARD_009,,wave_001_knife_soldier
+WAVE_002,2,AfterPlayerEndTurn,CARD_010,,wave_002_cavalry
+WAVE_003,3,AfterPlayerEndTurn,CARD_006,,wave_003_caocao

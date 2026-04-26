@@ -1,0 +1,79 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="900" fill="#efe2b8"/>
+  <rect width="1600" height="120" fill="#3f8bb5"/>
+  <text x="800" y="70" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="42" font-weight="700" fill="#fff">三国卡牌战线 - 战斗原型</text>
+  <text x="800" y="112" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" fill="#3a2618">准备阶段：英雄卡首回合必定到手，点击结束回合后敌方波次出现</text>
+
+  <rect x="32" y="150" width="736" height="470" rx="18" fill="#beeaa6" stroke="#392719" stroke-width="5"/>
+  <text x="400" y="195" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="700" fill="#332014">友方阵地</text>
+
+  <rect x="832" y="150" width="736" height="470" rx="18" fill="#f2aa93" stroke="#392719" stroke-width="5"/>
+  <text x="1200" y="195" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="700" fill="#332014">敌方波次</text>
+
+  <g font-family="Microsoft YaHei, Arial, sans-serif" text-anchor="middle">
+    <rect x="72" y="260" width="115" height="255" rx="12" fill="#ffffff" fill-opacity=".35" stroke="#664b31" stroke-width="3"/>
+    <rect x="205" y="260" width="115" height="255" rx="12" fill="#ffffff" fill-opacity=".35" stroke="#664b31" stroke-width="3"/>
+    <rect x="338" y="260" width="115" height="255" rx="12" fill="#ffffff" fill-opacity=".35" stroke="#664b31" stroke-width="3"/>
+    <rect x="471" y="260" width="115" height="255" rx="12" fill="#ffffff" fill-opacity=".35" stroke="#664b31" stroke-width="3"/>
+    <rect x="604" y="260" width="115" height="255" rx="12" fill="#ffffff" fill-opacity=".35" stroke="#664b31" stroke-width="3"/>
+    <text x="130" y="545" font-size="20" fill="#402918">承伤 5</text>
+    <text x="263" y="545" font-size="20" fill="#402918">承伤 4</text>
+    <text x="396" y="545" font-size="20" fill="#402918">承伤 3</text>
+    <text x="529" y="545" font-size="20" fill="#402918">承伤 2</text>
+    <text x="662" y="545" font-size="20" fill="#402918">承伤 1</text>
+
+    <rect x="95" y="315" width="90" height="140" rx="14" fill="#ffd15c" stroke="#392719" stroke-width="4"/>
+    <text x="140" y="365" font-size="24" font-weight="700" fill="#27180f">刘备</text>
+    <text x="140" y="420" font-size="20" fill="#fff">攻6 / 血7</text>
+    <rect x="228" y="315" width="90" height="140" rx="14" fill="#ffd15c" stroke="#392719" stroke-width="4"/>
+    <text x="273" y="365" font-size="24" font-weight="700" fill="#27180f">关羽</text>
+    <text x="273" y="420" font-size="20" fill="#fff">攻8 / 血8</text>
+    <rect x="361" y="315" width="90" height="140" rx="14" fill="#ffd15c" stroke="#392719" stroke-width="4"/>
+    <text x="406" y="365" font-size="24" font-weight="700" fill="#27180f">张飞</text>
+    <text x="406" y="420" font-size="20" fill="#fff">攻6 / 血10</text>
+  </g>
+
+  <g font-family="Microsoft YaHei, Arial, sans-serif">
+    <rect x="880" y="245" width="640" height="92" rx="12" fill="#ffffff" fill-opacity=".32"/>
+    <text x="910" y="300" font-size="26" font-weight="700" fill="#351d15">第 1 波</text>
+    <rect x="1130" y="258" width="120" height="66" rx="12" fill="#ff8f80" stroke="#392719" stroke-width="3"/>
+    <text x="1190" y="285" text-anchor="middle" font-size="22" font-weight="700" fill="#27180f">刀兵</text>
+    <text x="1190" y="312" text-anchor="middle" font-size="18" fill="#fff">攻4 / 血6</text>
+
+    <rect x="880" y="365" width="640" height="92" rx="12" fill="#ffffff" fill-opacity=".32"/>
+    <text x="910" y="420" font-size="26" font-weight="700" fill="#351d15">第 2 波</text>
+    <rect x="1130" y="378" width="120" height="66" rx="12" fill="#ff8f80" stroke="#392719" stroke-width="3"/>
+    <text x="1190" y="405" text-anchor="middle" font-size="22" font-weight="700" fill="#27180f">骑兵</text>
+    <text x="1190" y="432" text-anchor="middle" font-size="18" fill="#fff">攻7 / 血3</text>
+
+    <rect x="880" y="485" width="640" height="92" rx="12" fill="#ffffff" fill-opacity=".32"/>
+    <text x="910" y="540" font-size="26" font-weight="700" fill="#351d15">第 3 波</text>
+    <rect x="1130" y="498" width="120" height="66" rx="12" fill="#ff8f80" stroke="#392719" stroke-width="3"/>
+    <text x="1190" y="525" text-anchor="middle" font-size="22" font-weight="700" fill="#27180f">曹操</text>
+    <text x="1190" y="552" text-anchor="middle" font-size="18" fill="#fff">攻5 / 血8</text>
+  </g>
+
+  <rect x="32" y="650" width="1280" height="210" rx="18" fill="#faefb8" stroke="#392719" stroke-width="5"/>
+  <text x="672" y="693" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="30" font-weight="700" fill="#332014">第一回合手牌 / 初始牌库预览</text>
+
+  <g font-family="Microsoft YaHei, Arial, sans-serif" text-anchor="middle">
+    <g transform="translate(70 715)">
+      <rect width="145" height="120" rx="14" fill="#ffd15c" stroke="#392719" stroke-width="4"/><circle cx="24" cy="24" r="18" fill="#3f99e6"/><text x="24" y="31" font-size="20" fill="#fff">2</text><text x="84" y="34" font-size="25" font-weight="700" fill="#27180f">刘备</text><text x="72" y="76" font-size="20" fill="#27180f">攻6 血7</text><text x="112" y="107" font-size="16" fill="#fff">唯一</text>
+    </g>
+    <g transform="translate(235 715)">
+      <rect width="145" height="120" rx="14" fill="#ffd15c" stroke="#392719" stroke-width="4"/><circle cx="24" cy="24" r="18" fill="#3f99e6"/><text x="24" y="31" font-size="20" fill="#fff">2</text><text x="84" y="34" font-size="25" font-weight="700" fill="#27180f">关羽</text><text x="72" y="76" font-size="20" fill="#27180f">攻8 血8</text><text x="112" y="107" font-size="16" fill="#fff">唯一</text>
+    </g>
+    <g transform="translate(400 715)">
+      <rect width="145" height="120" rx="14" fill="#ffd15c" stroke="#392719" stroke-width="4"/><circle cx="24" cy="24" r="18" fill="#3f99e6"/><text x="24" y="31" font-size="20" fill="#fff">2</text><text x="84" y="34" font-size="25" font-weight="700" fill="#27180f">张飞</text><text x="72" y="76" font-size="20" fill="#27180f">攻6 血10</text><text x="112" y="107" font-size="16" fill="#fff">唯一</text>
+    </g>
+    <g transform="translate(565 715)">
+      <rect width="145" height="120" rx="14" fill="#a7e0ff" stroke="#392719" stroke-width="4"/><circle cx="24" cy="24" r="18" fill="#3f99e6"/><text x="24" y="31" font-size="20" fill="#fff">1</text><text x="84" y="34" font-size="23" font-weight="700" fill="#27180f">盾牌兵</text><text x="72" y="76" font-size="20" fill="#27180f">攻2 血8</text><text x="112" y="107" font-size="16" fill="#fff">x3</text>
+    </g>
+    <g transform="translate(730 715)">
+      <rect width="145" height="120" rx="14" fill="#a7e0ff" stroke="#392719" stroke-width="4"/><circle cx="24" cy="24" r="18" fill="#3f99e6"/><text x="24" y="31" font-size="20" fill="#fff">1</text><text x="84" y="34" font-size="23" font-weight="700" fill="#27180f">弓箭手</text><text x="72" y="76" font-size="20" fill="#27180f">攻6 血2</text><text x="112" y="107" font-size="16" fill="#fff">x3</text>
+    </g>
+  </g>
+
+  <rect x="1345" y="690" width="210" height="120" rx="18" fill="#e64836" stroke="#392719" stroke-width="5"/>
+  <text x="1450" y="763" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="700" fill="#fff">结束回合</text>
+</svg>

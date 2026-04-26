@@ -1,0 +1,6 @@
+card_id,copies,deck_rule
+CARD_001,1,unique_hero
+CARD_002,1,unique_hero
+CARD_003,1,unique_hero
+CARD_004,3,repeatable_soldier
+CARD_005,3,repeatable_soldier
