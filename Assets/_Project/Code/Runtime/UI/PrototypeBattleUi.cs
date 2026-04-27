@@ -38,14 +38,18 @@ namespace UnifyCountry.UI
         private Sprite roundedButtonSprite;
         private const int MaxFormationSlots = 5;
         private const int MaxEnergy = 3;
+        private const int InitialHandSize = 5;
+        private const int CardsDrawnPerTurn = 3;
         private const int PlayerBaseMaxHp = 10;
         private const float FormationMoveDuration = 0.45f;
+        private const string InitialBattleLog = "拖动手牌到友方阵地上阵，然后点击结束回合。";
 
         private Dictionary<string, CardRecord> cardMap = new Dictionary<string, CardRecord>();
         private Dictionary<string, Sprite> cardPortraitMap = new Dictionary<string, Sprite>();
         private readonly List<CardRecord> drawPile = new List<CardRecord>();
         private readonly List<CardRecord> discardPile = new List<CardRecord>();
         private readonly List<CardRecord> hand = new List<CardRecord>();
+        private readonly List<string> battleLogHistory = new List<string>();
         private readonly List<BattleUnit> playerUnits = new List<BattleUnit>();
         private readonly List<BattleUnit> enemyUnits = new List<BattleUnit>();
         private readonly Dictionary<int, RectTransform> unitViews = new Dictionary<int, RectTransform>();
@@ -57,7 +61,7 @@ namespace UnifyCountry.UI
         private int nextUnitRuntimeId = 1;
         private int currentEnergy = MaxEnergy;
         private int playerBaseHp = PlayerBaseMaxHp;
-        private string battleLog = "拖动手牌到友方阵地上阵，然后点击结束回合。";
+        private string battleLog = InitialBattleLog;
         private bool initialized;
         private bool isResolvingTurn;
         private bool battleEnded;
@@ -99,6 +103,7 @@ namespace UnifyCountry.UI
             drawPile.Clear();
             discardPile.Clear();
             hand.Clear();
+            battleLogHistory.Clear();
             playerUnits.Clear();
             enemyUnits.Clear();
             for (var i = 0; i < MaxFormationSlots; i++)
@@ -122,9 +127,28 @@ namespace UnifyCountry.UI
             nextWaveIndex = 0;
             currentEnergy = MaxEnergy;
             Shuffle(drawPile);
-            DrawCards(5);
-            battleLog = "准备阶段：抽牌堆已洗牌，抽 5 张牌进入手牌。";
+            DrawInitialHand();
+            AddBattleLogEntry($"准备阶段：英雄卡优先进入初始手牌，补足 {InitialHandSize} 张。");
             initialized = true;
+        }
+
+        private void DrawInitialHand()
+        {
+            var heroCards = drawPile
+                .Where(card => card.UnitType == UnitType.Hero && card.Camp == CardCamp.Player)
+                .ToList();
+
+            Shuffle(heroCards);
+
+            var heroCount = Mathf.Min(InitialHandSize, heroCards.Count);
+            for (var i = 0; i < heroCount; i++)
+            {
+                var hero = heroCards[i];
+                if (drawPile.Remove(hero))
+                    hand.Add(hero);
+            }
+
+            DrawCards(InitialHandSize - hand.Count);
         }
 
         private void DrawCards(int count)
@@ -191,14 +215,14 @@ namespace UnifyCountry.UI
 
             if (CountPlayerUnits() >= MaxFormationSlots)
             {
-                battleLog = "友方阵地已满，无法继续上阵。";
+                AddBattleLogEntry("友方阵地已满，无法继续上阵。");
                 BuildUi();
                 return;
             }
 
             if (currentEnergy < card.Cost)
             {
-                battleLog = $"费用不足：{card.CardName} 需要 {card.Cost} 点费用。";
+                AddBattleLogEntry($"费用不足：{card.CardName} 需要 {card.Cost} 点费用。");
                 BuildUi();
                 return;
             }
@@ -206,7 +230,7 @@ namespace UnifyCountry.UI
             insertIndex = Mathf.Clamp(insertIndex, 0, MaxFormationSlots - 1);
             if (playerUnits[insertIndex] != null)
             {
-                battleLog = "该阵地位置已有单位。";
+                AddBattleLogEntry("该阵地位置已有单位。");
                 BuildUi();
                 return;
             }
@@ -216,7 +240,7 @@ namespace UnifyCountry.UI
 
             currentEnergy -= card.Cost;
             playerUnits[insertIndex] = new BattleUnit(card, nextUnitRuntimeId++);
-            battleLog = $"{card.CardName} 上阵，消耗 {card.Cost} 点费用。";
+            AddBattleLogEntry($"{card.CardName} 上阵，消耗 {card.Cost} 点费用。");
             BuildUi();
         }
 
@@ -230,14 +254,14 @@ namespace UnifyCountry.UI
 
             if (CountPlayerUnits() >= MaxFormationSlots)
             {
-                battleLog = "友方阵地已满，无法继续上阵。";
+                AddBattleLogEntry("友方阵地已满，无法继续上阵。");
                 BuildUi();
                 return;
             }
 
             if (currentEnergy < card.Cost)
             {
-                battleLog = $"费用不足：{card.CardName} 需要 {card.Cost} 点费用。";
+                AddBattleLogEntry($"费用不足：{card.CardName} 需要 {card.Cost} 点费用。");
                 BuildUi();
                 return;
             }
@@ -249,13 +273,13 @@ namespace UnifyCountry.UI
             if (!TryInsertPlayerUnitAtGap(unit, gapIndex))
             {
                 hand.Add(card);
-                battleLog = "当前插入位置不可用。";
+                AddBattleLogEntry("当前插入位置不可用。");
                 BuildUi();
                 return;
             }
 
             currentEnergy -= card.Cost;
-            battleLog = $"{card.CardName} 插入阵地，消耗 {card.Cost} 点费用。";
+            AddBattleLogEntry($"{card.CardName} 插入阵地，消耗 {card.Cost} 点费用。");
             BuildUi();
         }
 
@@ -436,20 +460,22 @@ namespace UnifyCountry.UI
             var logLines = new List<string>();
             logLines.Add($"第 {turnNumber} 回合结束。");
             DiscardHand(logLines);
+            DiscardUnplayedInitialHeroes(logLines);
 
             yield return StartCoroutine(AdvanceFormationsRoutine(logLines));
 
             SpawnCurrentWave(logLines);
-            battleLog = string.Join("\n", logLines);
+            UpdateActiveTurnLog(logLines);
             BuildUi();
             yield return new WaitForSeconds(0.75f);
 
             ResolveEnemyAttack(logLines);
-            battleLog = string.Join("\n", logLines);
+            UpdateActiveTurnLog(logLines);
             BuildUi();
             if (playerBaseHp <= 0)
             {
-                battleLog = string.Join("\n", logLines) + "\n大本营被攻破，战斗失败。";
+                logLines.Add("大本营被攻破，战斗失败。");
+                CommitTurnLog(logLines);
                 battleEnded = true;
                 isResolvingTurn = false;
                 BuildUi();
@@ -465,7 +491,8 @@ namespace UnifyCountry.UI
 
             if (enemyUnits.Count == 0 && nextWaveIndex >= waveSlots.Count)
             {
-                battleLog = string.Join("\n", logLines) + "\n战斗胜利！";
+                logLines.Add("战斗胜利！");
+                CommitTurnLog(logLines);
                 battleEnded = true;
                 isResolvingTurn = false;
                 BuildUi();
@@ -474,9 +501,9 @@ namespace UnifyCountry.UI
 
             turnNumber++;
             currentEnergy = MaxEnergy;
-            var drawCount = DrawCardsWithCount(5);
+            var drawCount = DrawCardsWithCount(CardsDrawnPerTurn);
             logLines.Add($"进入第 {turnNumber} 回合，费用恢复到 {MaxEnergy}，从抽牌堆抽 {drawCount} 张牌。");
-            battleLog = string.Join("\n", logLines);
+            CommitTurnLog(logLines);
             isResolvingTurn = false;
             BuildUi();
         }
@@ -495,6 +522,45 @@ namespace UnifyCountry.UI
             return drawn;
         }
 
+        private void AddBattleLogEntry(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                return;
+
+            battleLogHistory.Add(line);
+            battleLog = ComposeBattleLog(null);
+        }
+
+        private void UpdateActiveTurnLog(List<string> activeLines)
+        {
+            battleLog = ComposeBattleLog(activeLines);
+        }
+
+        private void CommitTurnLog(List<string> activeLines)
+        {
+            if (activeLines != null)
+                battleLogHistory.AddRange(activeLines.Where(line => !string.IsNullOrWhiteSpace(line)));
+
+            battleLog = ComposeBattleLog(null);
+        }
+
+        private string ComposeBattleLog(List<string> activeLines)
+        {
+            var lines = new List<string>();
+            if (battleLogHistory.Count > 0)
+                lines.AddRange(battleLogHistory);
+
+            if (activeLines != null && activeLines.Count > 0)
+            {
+                if (lines.Count > 0)
+                    lines.Add(string.Empty);
+
+                lines.AddRange(activeLines);
+            }
+
+            return lines.Count == 0 ? InitialBattleLog : string.Join("\n", lines);
+        }
+
         private void DiscardHand(List<string> logLines)
         {
             if (hand.Count == 0)
@@ -504,6 +570,27 @@ namespace UnifyCountry.UI
             discardPile.AddRange(hand);
             hand.Clear();
             logLines.Add($"未使用的 {count} 张手牌进入弃牌堆。");
+        }
+
+        private void DiscardUnplayedInitialHeroes(List<string> logLines)
+        {
+            if (turnNumber != 1)
+                return;
+
+            var heroes = drawPile
+                .Where(card => card.UnitType == UnitType.Hero && card.Camp == CardCamp.Player)
+                .ToList();
+
+            if (heroes.Count == 0)
+                return;
+
+            foreach (var hero in heroes)
+            {
+                drawPile.Remove(hero);
+                discardPile.Add(hero);
+            }
+
+            logLines.Add($"抽牌堆中剩余的 {heroes.Count} 张英雄卡进入弃牌堆。");
         }
 
         private void SpawnCurrentWave(List<string> logLines)
@@ -603,7 +690,7 @@ namespace UnifyCountry.UI
                 yield break;
 
             logLines.Add("阵型向前补位。");
-            battleLog = string.Join("\n", logLines);
+            UpdateActiveTurnLog(logLines);
 
             animatedSlotOverrides.Clear();
             foreach (var move in moves)
@@ -748,8 +835,7 @@ namespace UnifyCountry.UI
 
             var logPanel = CreatePanel(canvas.transform, "战斗记录", new Color(0.93f, 0.84f, 0.64f));
             SetRect(logPanel, new Vector2(0.75f, 0.12f), new Vector2(0.98f, 0.28f), Vector2.zero, Vector2.zero);
-            var logText = CreateText(logPanel.transform, battleLog, 18, TextAnchor.UpperLeft, new Color(0.18f, 0.12f, 0.08f));
-            SetRect(logText.rectTransform, new Vector2(0.06f, 0.08f), new Vector2(0.94f, 0.7f), Vector2.zero, Vector2.zero);
+            BuildBattleLog(logPanel.transform);
 
             if (!battleEnded)
             {
@@ -763,6 +849,72 @@ namespace UnifyCountry.UI
             SetRect(resetButton.GetComponent<RectTransform>(), new Vector2(battleEnded ? 0.87f : 0.88f, 0.035f), new Vector2(0.98f, 0.1f), Vector2.zero, Vector2.zero);
             resetButton.interactable = !isResolvingTurn;
             resetButton.onClick.AddListener(ResetBattle);
+        }
+
+        private void BuildBattleLog(Transform parent)
+        {
+            var scrollRoot = CreateImage(parent, "Battle Log Scroll", new Color(1f, 0.96f, 0.78f, 0.35f));
+            SetRect(scrollRoot.rectTransform, new Vector2(0.06f, 0.08f), new Vector2(0.94f, 0.72f), Vector2.zero, Vector2.zero);
+
+            var scrollRect = scrollRoot.gameObject.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 24f;
+
+            var viewport = CreateImage(scrollRoot.transform, "Viewport", Color.clear);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            SetRect(viewport.rectTransform, new Vector2(0.02f, 0.04f), new Vector2(0.9f, 0.96f), Vector2.zero, Vector2.zero);
+
+            var contentObject = new GameObject("Content", typeof(RectTransform), typeof(Text), typeof(ContentSizeFitter));
+            contentObject.transform.SetParent(viewport.transform, false);
+
+            var content = contentObject.GetComponent<RectTransform>();
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = new Vector2(0f, 0f);
+
+            var text = contentObject.GetComponent<Text>();
+            text.text = battleLog;
+            text.font = uiFont;
+            text.fontSize = 16;
+            text.alignment = TextAnchor.UpperLeft;
+            text.color = new Color(0.18f, 0.12f, 0.08f);
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.resizeTextForBestFit = false;
+
+            var fitter = contentObject.GetComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var scrollbar = CreateVerticalScrollbar(scrollRoot.transform);
+            scrollRect.viewport = viewport.rectTransform;
+            scrollRect.content = content;
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+            scrollRect.verticalNormalizedPosition = 0f;
+        }
+
+        private Scrollbar CreateVerticalScrollbar(Transform parent)
+        {
+            var scrollbarRoot = CreateImage(parent, "Scrollbar", new Color(0.32f, 0.22f, 0.14f, 0.25f));
+            SetRect(scrollbarRoot.rectTransform, new Vector2(0.92f, 0.04f), new Vector2(0.98f, 0.96f), Vector2.zero, Vector2.zero);
+
+            var slidingArea = new GameObject("Sliding Area", typeof(RectTransform));
+            slidingArea.transform.SetParent(scrollbarRoot.transform, false);
+            var slidingRect = slidingArea.GetComponent<RectTransform>();
+            SetRect(slidingRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            var handle = CreateImage(slidingArea.transform, "Handle", new Color(0.54f, 0.36f, 0.2f, 0.85f));
+            SetRect(handle.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            var scrollbar = scrollbarRoot.gameObject.AddComponent<Scrollbar>();
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.targetGraphic = handle;
+            scrollbar.handleRect = handle.rectTransform;
+            return scrollbar;
         }
 
         private void BuildBoard(Transform parent, bool playerSide, List<BattleUnit> units)
