@@ -27,6 +27,7 @@ namespace UnifyCountry.UI
         private readonly Color soldierCardColor = new Color(0.66f, 0.88f, 1f);
         private readonly Color enemyCardColor = new Color(1f, 0.56f, 0.5f);
         private const int MaxFormationSlots = 5;
+        private const int MaxEnergy = 3;
         private const float FormationMoveDuration = 0.45f;
 
         private Dictionary<string, CardRecord> cardMap = new Dictionary<string, CardRecord>();
@@ -41,6 +42,7 @@ namespace UnifyCountry.UI
         private int turnNumber = 1;
         private int nextWaveIndex;
         private int nextUnitRuntimeId = 1;
+        private int currentEnergy = MaxEnergy;
         private string battleLog = "\u62d6\u52a8\u624b\u724c\u5230\u53cb\u65b9\u9635\u5730\u4e0a\u9635\uff0c\u7136\u540e\u70b9\u51fb\u7ed3\u675f\u56de\u5408\u3002";
         private bool initialized;
         private bool isResolvingTurn;
@@ -96,6 +98,7 @@ namespace UnifyCountry.UI
             DrawGuaranteedFirstHand();
             turnNumber = 1;
             nextWaveIndex = 0;
+            currentEnergy = MaxEnergy;
             battleLog = "\u51c6\u5907\u9636\u6bb5\uff1a\u82f1\u96c4\u5361\u5df2\u8fdb\u5165\u9996\u56de\u5408\u624b\u724c\u3002";
             initialized = true;
         }
@@ -150,10 +153,20 @@ namespace UnifyCountry.UI
                 return;
             }
 
-            hand.Remove(card);
+            if (currentEnergy < card.Cost)
+            {
+                battleLog = $"\u8d39\u7528\u4e0d\u8db3\uff1a{card.CardName} \u9700\u8981 {card.Cost} \u70b9\u8d39\u7528\u3002";
+                BuildUi();
+                return;
+            }
+
+            if (!hand.Remove(card))
+                return;
+
+            currentEnergy -= card.Cost;
             insertIndex = Mathf.Clamp(insertIndex, 0, playerUnits.Count);
             playerUnits.Insert(insertIndex, new BattleUnit(card, nextUnitRuntimeId++));
-            battleLog = $"{card.CardName} \u4e0a\u9635\u3002\u53cb\u65b9\u6700\u53f3\u4fa7\u627f\u4f24 1 \u4f18\u5148\u627f\u4f24\u3002";
+            battleLog = $"{card.CardName} \u4e0a\u9635\uff0c\u6d88\u8017 {card.Cost} \u70b9\u8d39\u7528\u3002";
             BuildUi();
         }
 
@@ -198,8 +211,9 @@ namespace UnifyCountry.UI
             }
 
             turnNumber++;
+            currentEnergy = MaxEnergy;
             DrawCards(3);
-            logLines.Add($"\u8fdb\u5165\u7b2c {turnNumber} \u56de\u5408\uff0c\u62bd 3 \u5f20\u724c\u3002");
+            logLines.Add($"\u8fdb\u5165\u7b2c {turnNumber} \u56de\u5408\uff0c\u8d39\u7528\u6062\u590d\u5230 {MaxEnergy}\uff0c\u62bd 3 \u5f20\u724c\u3002");
             battleLog = string.Join("\n", logLines);
             isResolvingTurn = false;
             BuildUi();
@@ -402,7 +416,7 @@ namespace UnifyCountry.UI
             var title = CreateText(canvas.transform, "\u4e09\u56fd\u5361\u724c\u6218\u7ebf - \u53ef\u73a9\u539f\u578b", 38, TextAnchor.MiddleCenter, Color.white);
             SetRect(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -42f), new Vector2(760f, 56f));
 
-            var status = CreateText(canvas.transform, $"\u7b2c {turnNumber} \u56de\u5408  |  \u724c\u5e93 {drawPile.Count}  |  \u624b\u724c {hand.Count}  |  \u4e0b\u4e00\u6ce2 {Mathf.Min(nextWaveIndex + 1, waveSlots.Count)} / {waveSlots.Count}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
+            var status = CreateText(canvas.transform, $"\u7b2c {turnNumber} \u56de\u5408  |  \u8d39\u7528 {currentEnergy}/{MaxEnergy}  |  \u724c\u5e93 {drawPile.Count}  |  \u624b\u724c {hand.Count}  |  \u4e0b\u4e00\u6ce2 {Mathf.Min(nextWaveIndex + 1, waveSlots.Count)} / {waveSlots.Count}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
             SetRect(status.rectTransform, new Vector2(0.18f, 0.895f), new Vector2(0.82f, 0.945f), Vector2.zero, Vector2.zero);
 
             var playerPanel = CreatePanel(canvas.transform, "\u53cb\u65b9\u9635\u5730", playerPanelColor);
@@ -442,7 +456,7 @@ namespace UnifyCountry.UI
                 slot.gameObject.AddComponent<Outline>().effectColor = new Color(0.35f, 0.25f, 0.16f);
 
                 var order = playerSide ? MaxFormationSlots - i : i + 1;
-                var label = CreateText(slot.transform, playerSide ? $"\u627f\u4f24 {order}" : $"\u654c\u4f4d {order}", 18, TextAnchor.LowerCenter, new Color(0.23f, 0.16f, 0.1f));
+                var label = CreateText(slot.transform, order.ToString(), 18, TextAnchor.LowerCenter, new Color(0.23f, 0.16f, 0.1f));
                 SetRect(label.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             }
 
@@ -540,6 +554,7 @@ namespace UnifyCountry.UI
 
             var button = image.gameObject.AddComponent<Button>();
             button.onClick.AddListener(() => PlayCard(card));
+            button.interactable = !isResolvingTurn && currentEnergy >= card.Cost;
             var canvasGroup = image.gameObject.AddComponent<CanvasGroup>();
             var dragHandler = image.gameObject.AddComponent<CardDragHandler>();
             dragHandler.Initialize(this, card, image.rectTransform, canvasGroup);
@@ -572,12 +587,28 @@ namespace UnifyCountry.UI
             root.gameObject.AddComponent<Outline>().effectColor = new Color(0.22f, 0.16f, 0.1f);
 
             var name = CreateText(root.transform, unit.Name, compact ? 17 : 18, TextAnchor.MiddleCenter, new Color(0.12f, 0.08f, 0.05f));
-            SetRect(name.rectTransform, new Vector2(0f, 0.58f), Vector2.one, Vector2.zero, Vector2.zero);
+            SetRect(name.rectTransform, new Vector2(0f, 0.56f), Vector2.one, Vector2.zero, Vector2.zero);
 
-            var stats = CreateText(root.transform, $"\u653b{unit.Attack} / \u8840{unit.CurrentHp}", compact ? 15 : 16, TextAnchor.MiddleCenter, Color.white);
-            SetRect(stats.rectTransform, new Vector2(0f, 0.08f), new Vector2(1f, 0.42f), Vector2.zero, Vector2.zero);
+            var attack = CreateText(root.transform, $"\u653b {unit.Attack}", compact ? 15 : 16, TextAnchor.MiddleCenter, new Color(0.18f, 0.1f, 0.06f));
+            SetRect(attack.rectTransform, new Vector2(0f, 0.32f), new Vector2(1f, 0.52f), Vector2.zero, Vector2.zero);
+
+            CreateHealthBar(root.transform, unit);
 
             return root.rectTransform;
+        }
+
+        private void CreateHealthBar(Transform parent, BattleUnit unit)
+        {
+            var frame = CreateImage(parent, "Health Bar", new Color(0.22f, 0.04f, 0.035f));
+            SetRect(frame.rectTransform, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.27f), Vector2.zero, Vector2.zero);
+            frame.gameObject.AddComponent<Outline>().effectColor = new Color(0.08f, 0.02f, 0.015f);
+
+            var fill = CreateImage(frame.transform, "Health Fill", new Color(0.83f, 0.08f, 0.06f));
+            var hpRatio = unit.MaxHp <= 0 ? 0f : Mathf.Clamp01((float)unit.CurrentHp / unit.MaxHp);
+            SetRect(fill.rectTransform, Vector2.zero, new Vector2(hpRatio, 1f), Vector2.zero, Vector2.zero);
+
+            var text = CreateText(frame.transform, $"{unit.CurrentHp}/{unit.MaxHp}", 15, TextAnchor.MiddleCenter, Color.white);
+            SetRect(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
         }
 
         private RectTransform CreateBadge(Transform parent, string value, Color color)
@@ -842,6 +873,7 @@ namespace UnifyCountry.UI
             public int RuntimeId { get; }
             public string Name => card.CardName;
             public int Attack => card.Attack;
+            public int MaxHp => card.Hp;
             public CardCamp Camp => card.Camp;
             public int CurrentHp { get; private set; }
             public bool IsDead => CurrentHp <= 0;
