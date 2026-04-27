@@ -9,6 +9,13 @@ namespace UnifyCountry.UI
 {
     public sealed partial class PrototypeBattleUi : MonoBehaviour
     {
+        [System.Serializable]
+        private sealed class CardPortraitEntry
+        {
+            public string cardId;
+            public Sprite portrait;
+        }
+
         [Header("Config")]
         [SerializeField] private TextAsset cardsCsv;
         [SerializeField] private TextAsset startingDeckCsv;
@@ -17,6 +24,9 @@ namespace UnifyCountry.UI
         [Header("Style")]
         [SerializeField] private Font uiFont;
         [SerializeField] private Vector2 referenceResolution = new Vector2(1600f, 900f);
+
+        [Header("Card Art")]
+        [SerializeField] private List<CardPortraitEntry> cardPortraits = new List<CardPortraitEntry>();
 
         private readonly Color backgroundColor = new Color(0.94f, 0.89f, 0.73f);
         private readonly Color playerPanelColor = new Color(0.76f, 0.92f, 0.67f);
@@ -32,6 +42,7 @@ namespace UnifyCountry.UI
         private const float FormationMoveDuration = 0.45f;
 
         private Dictionary<string, CardRecord> cardMap = new Dictionary<string, CardRecord>();
+        private Dictionary<string, Sprite> cardPortraitMap = new Dictionary<string, Sprite>();
         private readonly List<CardRecord> drawPile = new List<CardRecord>();
         private readonly List<CardRecord> discardPile = new List<CardRecord>();
         private readonly List<CardRecord> hand = new List<CardRecord>();
@@ -82,6 +93,7 @@ namespace UnifyCountry.UI
 
             var cards = PrototypeCsvDatabase.LoadCards(cardsCsv);
             cardMap = cards.ToDictionary(card => card.CardId);
+            RebuildCardPortraitMap();
             waveSlots = PrototypeCsvDatabase.LoadWaveSlots(wavesCsv);
 
             drawPile.Clear();
@@ -700,6 +712,7 @@ namespace UnifyCountry.UI
 
         private void BuildUi()
         {
+            RebuildCardPortraitMap();
             ClearChildren();
             unitViews.Clear();
 
@@ -797,7 +810,7 @@ namespace UnifyCountry.UI
         private void BuildPlayerBase(Transform parent)
         {
             var root = CreateImage(parent, "大本营", new Color(0.88f, 0.72f, 0.42f));
-            SetRect(root.rectTransform, new Vector2(0.34f, 0.73f), new Vector2(0.66f, 0.84f), Vector2.zero, Vector2.zero);
+            SetRect(root.rectTransform, new Vector2(0.34f, 0.75f), new Vector2(0.66f, 0.86f), Vector2.zero, Vector2.zero);
 
             var outline = root.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0.28f, 0.18f, 0.08f);
@@ -923,6 +936,37 @@ namespace UnifyCountry.UI
             }
         }
 
+        private void RebuildCardPortraitMap()
+        {
+            if (cardPortraits == null)
+            {
+                cardPortraitMap = new Dictionary<string, Sprite>();
+                return;
+            }
+
+            cardPortraitMap = cardPortraits
+                .Where(entry => entry != null
+                    && !string.IsNullOrWhiteSpace(entry.cardId)
+                    && entry.portrait != null)
+                .GroupBy(entry => entry.cardId)
+                .ToDictionary(group => group.Key, group => group.First().portrait);
+        }
+
+        private bool TryGetCardPortrait(CardRecord card, out Sprite portrait)
+        {
+            if (cardPortraitMap != null && cardPortraitMap.TryGetValue(card.CardId, out portrait))
+                return true;
+
+#if UNITY_EDITOR
+            portrait = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
+                $"Assets/_Project/Art/Cards/Portraits/{card.CardId}.png");
+            return portrait != null;
+#else
+            portrait = null;
+            return false;
+#endif
+        }
+
         private Button CreateCard(Transform parent, CardRecord card)
         {
             var color = card.UnitType == UnitType.Hero ? heroCardColor : soldierCardColor;
@@ -945,8 +989,22 @@ namespace UnifyCountry.UI
             var portrait = CreateImage(image.transform, "Portrait", new Color(1f, 0.96f, 0.78f));
             SetRect(portrait.rectTransform, new Vector2(0.14f, 0.34f), new Vector2(0.86f, 0.69f), Vector2.zero, Vector2.zero);
 
-            var face = CreateText(portrait.transform, string.IsNullOrEmpty(card.CardName) ? "?" : card.CardName.Substring(0, 1), 34, TextAnchor.MiddleCenter, Color.white);
-            SetRect(face.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            if (TryGetCardPortrait(card, out var portraitSprite))
+            {
+                portrait.color = Color.white;
+                portrait.sprite = portraitSprite;
+                portrait.preserveAspect = true;
+            }
+            else
+            {
+                var face = CreateText(
+                    portrait.transform,
+                    string.IsNullOrEmpty(card.CardName) ? "?" : card.CardName.Substring(0, 1),
+                    34,
+                    TextAnchor.MiddleCenter,
+                    Color.white);
+                SetRect(face.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            }
 
             var stats = CreateText(image.transform, $"攻 {card.Attack}   血 {card.Hp}", 20, TextAnchor.MiddleCenter, new Color(0.2f, 0.12f, 0.08f));
             SetRect(stats.rectTransform, new Vector2(0.05f, 0.12f), new Vector2(0.95f, 0.31f), Vector2.zero, Vector2.zero);
@@ -991,4 +1049,3 @@ namespace UnifyCountry.UI
 
     }
 }
-
