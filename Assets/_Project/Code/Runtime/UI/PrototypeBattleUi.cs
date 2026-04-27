@@ -26,17 +26,22 @@ namespace UnifyCountry.UI
         private readonly Color heroCardColor = new Color(1f, 0.82f, 0.36f);
         private readonly Color soldierCardColor = new Color(0.66f, 0.88f, 1f);
         private readonly Color enemyCardColor = new Color(1f, 0.56f, 0.5f);
+        private const int MaxFormationSlots = 5;
+        private const float FormationMoveDuration = 0.45f;
 
         private Dictionary<string, CardRecord> cardMap = new Dictionary<string, CardRecord>();
         private readonly List<CardRecord> drawPile = new List<CardRecord>();
         private readonly List<CardRecord> hand = new List<CardRecord>();
         private readonly List<BattleUnit> playerUnits = new List<BattleUnit>();
         private readonly List<BattleUnit> enemyUnits = new List<BattleUnit>();
+        private readonly Dictionary<int, RectTransform> unitViews = new Dictionary<int, RectTransform>();
+        private readonly Dictionary<int, int> animatedSlotOverrides = new Dictionary<int, int>();
         private List<List<string>> waveSlots = new List<List<string>>();
 
         private int turnNumber = 1;
         private int nextWaveIndex;
-        private string battleLog = "\u70b9\u51fb\u624b\u724c\u4e0a\u9635\uff0c\u7136\u540e\u70b9\u51fb\u7ed3\u675f\u56de\u5408\u3002";
+        private int nextUnitRuntimeId = 1;
+        private string battleLog = "\u62d6\u52a8\u624b\u724c\u5230\u53cb\u65b9\u9635\u5730\u4e0a\u9635\uff0c\u7136\u540e\u70b9\u51fb\u7ed3\u675f\u56de\u5408\u3002";
         private bool initialized;
         private bool isResolvingTurn;
 
@@ -76,6 +81,7 @@ namespace UnifyCountry.UI
             hand.Clear();
             playerUnits.Clear();
             enemyUnits.Clear();
+            nextUnitRuntimeId = 1;
 
             var startingDeck = PrototypeCsvDatabase.LoadStartingDeck(startingDeckCsv);
             foreach (var entry in startingDeck)
@@ -126,10 +132,18 @@ namespace UnifyCountry.UI
 
         private void PlayCard(CardRecord card)
         {
+            PlayCardAt(card, playerUnits.Count);
+        }
+
+        private void PlayCardAt(CardRecord card, int insertIndex)
+        {
             if (card == null || card.Camp != CardCamp.Player)
                 return;
 
-            if (playerUnits.Count >= 5)
+            if (isResolvingTurn)
+                return;
+
+            if (playerUnits.Count >= MaxFormationSlots)
             {
                 battleLog = "\u53cb\u65b9\u9635\u5730\u5df2\u6ee1\uff0c\u65e0\u6cd5\u7ee7\u7eed\u4e0a\u9635\u3002";
                 BuildUi();
@@ -137,8 +151,9 @@ namespace UnifyCountry.UI
             }
 
             hand.Remove(card);
-            playerUnits.Insert(0, new BattleUnit(card));
-            battleLog = $"{card.CardName} \u4e0a\u9635\u3002\u6700\u53f3\u4fa7\u5355\u4f4d\u4f1a\u4f18\u5148\u627f\u4f24\u3002";
+            insertIndex = Mathf.Clamp(insertIndex, 0, playerUnits.Count);
+            playerUnits.Insert(insertIndex, new BattleUnit(card, nextUnitRuntimeId++));
+            battleLog = $"{card.CardName} \u4e0a\u9635\u3002\u53cb\u65b9\u6700\u53f3\u4fa7\u627f\u4f24 1 \u4f18\u5148\u627f\u4f24\u3002";
             BuildUi();
         }
 
@@ -157,6 +172,8 @@ namespace UnifyCountry.UI
             var logLines = new List<string>();
             logLines.Add($"\u7b2c {turnNumber} \u56de\u5408\u7ed3\u675f\u3002");
 
+            yield return StartCoroutine(AdvanceFormationsRoutine(logLines));
+
             SpawnCurrentWave(logLines);
             battleLog = string.Join("\n", logLines);
             BuildUi();
@@ -169,7 +186,8 @@ namespace UnifyCountry.UI
 
             ResolvePlayerAttack(logLines);
             AppendDeathLogs(logLines);
-            RemoveDeadUnits();
+
+            yield return StartCoroutine(AdvanceFormationsRoutine(logLines));
 
             if (enemyUnits.Count == 0 && nextWaveIndex >= waveSlots.Count)
             {
@@ -198,13 +216,13 @@ namespace UnifyCountry.UI
             var spawnedNames = new List<string>();
             foreach (var cardId in wave)
             {
-                if (enemyUnits.Count >= 5)
+                if (enemyUnits.Count >= MaxFormationSlots)
                     break;
 
                 if (!cardMap.TryGetValue(cardId, out var card))
                     continue;
 
-                enemyUnits.Add(new BattleUnit(card));
+                enemyUnits.Add(new BattleUnit(card, nextUnitRuntimeId++));
                 spawnedNames.Add(card.CardName);
             }
 
@@ -270,10 +288,91 @@ namespace UnifyCountry.UI
             return null;
         }
 
-        private void RemoveDeadUnits()
+        private IEnumerator AdvanceFormationsRoutine(List<string> logLines)
         {
-            playerUnits.RemoveAll(unit => unit.IsDead);
-            enemyUnits.RemoveAll(unit => unit.IsDead);
+            var moves = new List<FormationMove>();
+            moves.AddRange(AdvanceFormation(playerUnits, true));
+            moves.AddRange(AdvanceFormation(enemyUnits, false));
+
+            if (moves.Count == 0)
+                yield break;
+
+            logLines.Add("\u9635\u578b\u5411\u524d\u8865\u4f4d\u3002");
+            battleLog = string.Join("\n", logLines);
+
+            animatedSlotOverrides.Clear();
+            foreach (var move in moves)
+                animatedSlotOverrides[move.UnitRuntimeId] = move.FromSlotIndex;
+
+            BuildUi();
+            yield return StartCoroutine(AnimateFormationMoves(moves));
+            animatedSlotOverrides.Clear();
+
+            BuildUi();
+            yield return new WaitForSeconds(0.15f);
+        }
+
+        private List<FormationMove> AdvanceFormation(List<BattleUnit> units, bool playerSide)
+        {
+            var oldSlots = new Dictionary<int, int>();
+            for (var i = 0; i < units.Count; i++)
+            {
+                var unit = units[i];
+                if (!unit.IsDead)
+                    oldSlots[unit.RuntimeId] = GetVisualSlotIndex(playerSide, i, units.Count);
+            }
+
+            units.RemoveAll(unit => unit.IsDead);
+
+            var moves = new List<FormationMove>();
+            for (var i = 0; i < units.Count; i++)
+            {
+                var unit = units[i];
+                var toSlot = GetVisualSlotIndex(playerSide, i, units.Count);
+                if (oldSlots.TryGetValue(unit.RuntimeId, out var fromSlot) && fromSlot != toSlot)
+                    moves.Add(new FormationMove(unit.RuntimeId, fromSlot, toSlot));
+            }
+
+            return moves;
+        }
+
+        private IEnumerator AnimateFormationMoves(List<FormationMove> moves)
+        {
+            var rects = new List<RectTransform>();
+            var startMins = new List<Vector2>();
+            var startMaxes = new List<Vector2>();
+            var targetMins = new List<Vector2>();
+            var targetMaxes = new List<Vector2>();
+
+            foreach (var move in moves)
+            {
+                if (!unitViews.TryGetValue(move.UnitRuntimeId, out var rect))
+                    continue;
+
+                rects.Add(rect);
+                startMins.Add(rect.anchorMin);
+                startMaxes.Add(rect.anchorMax);
+                targetMins.Add(GetUnitAnchorMin(move.ToSlotIndex));
+                targetMaxes.Add(GetUnitAnchorMax(move.ToSlotIndex));
+            }
+
+            var elapsed = 0f;
+            while (elapsed < FormationMoveDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / FormationMoveDuration);
+                t = t * t * (3f - 2f * t);
+
+                for (var i = 0; i < rects.Count; i++)
+                {
+                    rects[i].anchorMin = Vector2.Lerp(startMins[i], targetMins[i], t);
+                    rects[i].anchorMax = Vector2.Lerp(startMaxes[i], targetMaxes[i], t);
+                    rects[i].offsetMin = Vector2.zero;
+                    rects[i].offsetMax = Vector2.zero;
+                }
+
+                yield return null;
+            }
         }
 
         private void AppendDeathLogs(List<string> logLines)
@@ -294,6 +393,7 @@ namespace UnifyCountry.UI
         private void BuildUi()
         {
             ClearChildren();
+            unitViews.Clear();
 
             var canvas = CreateCanvas();
             EnsureEventSystem();
@@ -314,7 +414,7 @@ namespace UnifyCountry.UI
             BuildBoard(enemyPanel.transform, false, enemyUnits);
             BuildUpcomingWaveHint(enemyPanel.transform);
 
-            var handPanel = CreatePanel(canvas.transform, "\u624b\u724c\uff08\u70b9\u51fb\u4e0a\u9635\uff09", handPanelColor);
+            var handPanel = CreatePanel(canvas.transform, "\u624b\u724c\uff08\u62d6\u5165\u53cb\u65b9\u9635\u5730\u4e0a\u9635\uff09", handPanelColor);
             SetRect(handPanel, new Vector2(0.02f, 0.03f), new Vector2(0.73f, 0.28f), Vector2.zero, Vector2.zero);
             BuildHand(handPanel.transform);
 
@@ -335,23 +435,72 @@ namespace UnifyCountry.UI
 
         private void BuildBoard(Transform parent, bool playerSide, List<BattleUnit> units)
         {
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < MaxFormationSlots; i++)
             {
                 var slot = CreateImage(parent, $"Slot {i + 1}", new Color(1f, 1f, 1f, 0.38f));
-                SetRect(slot.rectTransform, new Vector2(0.05f + i * 0.18f, 0.18f), new Vector2(0.19f + i * 0.18f, 0.72f), Vector2.zero, Vector2.zero);
+                SetRect(slot.rectTransform, GetSlotAnchorMin(i), GetSlotAnchorMax(i), Vector2.zero, Vector2.zero);
                 slot.gameObject.AddComponent<Outline>().effectColor = new Color(0.35f, 0.25f, 0.16f);
 
-                var order = playerSide ? 5 - i : i + 1;
+                var order = playerSide ? MaxFormationSlots - i : i + 1;
                 var label = CreateText(slot.transform, playerSide ? $"\u627f\u4f24 {order}" : $"\u654c\u4f4d {order}", 18, TextAnchor.LowerCenter, new Color(0.23f, 0.16f, 0.1f));
                 SetRect(label.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             }
 
             for (var i = 0; i < units.Count; i++)
             {
-                var index = Mathf.Min(i, 4);
+                var index = GetVisualSlotIndex(playerSide, i, units.Count);
+                if (animatedSlotOverrides.TryGetValue(units[i].RuntimeId, out var overrideSlot))
+                    index = overrideSlot;
+
                 var unit = CreateUnitToken(parent, units[i], false);
-                SetRect(unit, new Vector2(0.065f + index * 0.18f, 0.3f), new Vector2(0.175f + index * 0.18f, 0.65f), Vector2.zero, Vector2.zero);
+                SetRect(unit, GetUnitAnchorMin(index), GetUnitAnchorMax(index), Vector2.zero, Vector2.zero);
+                unitViews[units[i].RuntimeId] = unit;
             }
+
+            if (playerSide && !isResolvingTurn && units.Count < MaxFormationSlots)
+            {
+                for (var i = 0; i <= units.Count; i++)
+                    CreatePlayerInsertDropZone(parent, i, units.Count);
+            }
+        }
+
+        private void CreatePlayerInsertDropZone(Transform parent, int insertIndex, int unitCount)
+        {
+            var targetSlot = MaxFormationSlots - (unitCount + 1) + insertIndex;
+            var zone = CreateImage(parent, $"Insert {insertIndex}", new Color(0.2f, 0.7f, 0.95f, 0.08f));
+            SetRect(zone.rectTransform, GetSlotAnchorMin(targetSlot), GetSlotAnchorMax(targetSlot), Vector2.zero, Vector2.zero);
+
+            var outline = zone.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.1f, 0.45f, 0.85f, 0.55f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            var dropZone = zone.gameObject.AddComponent<BoardInsertDropZone>();
+            dropZone.Initialize(this, insertIndex, zone);
+        }
+
+        private static int GetVisualSlotIndex(bool playerSide, int unitIndex, int unitCount)
+        {
+            return playerSide ? MaxFormationSlots - unitCount + unitIndex : unitIndex;
+        }
+
+        private static Vector2 GetSlotAnchorMin(int slotIndex)
+        {
+            return new Vector2(0.05f + slotIndex * 0.18f, 0.18f);
+        }
+
+        private static Vector2 GetSlotAnchorMax(int slotIndex)
+        {
+            return new Vector2(0.19f + slotIndex * 0.18f, 0.72f);
+        }
+
+        private static Vector2 GetUnitAnchorMin(int slotIndex)
+        {
+            return new Vector2(0.065f + slotIndex * 0.18f, 0.3f);
+        }
+
+        private static Vector2 GetUnitAnchorMax(int slotIndex)
+        {
+            return new Vector2(0.175f + slotIndex * 0.18f, 0.65f);
         }
 
         private void BuildUpcomingWaveHint(Transform parent)
@@ -391,6 +540,9 @@ namespace UnifyCountry.UI
 
             var button = image.gameObject.AddComponent<Button>();
             button.onClick.AddListener(() => PlayCard(card));
+            var canvasGroup = image.gameObject.AddComponent<CanvasGroup>();
+            var dragHandler = image.gameObject.AddComponent<CardDragHandler>();
+            dragHandler.Initialize(this, card, image.rectTransform, canvasGroup);
 
             var cost = CreateBadge(image.transform, card.Cost.ToString(), new Color(0.25f, 0.6f, 0.95f));
             SetRect(cost, new Vector2(0.03f, 0.72f), new Vector2(0.25f, 0.96f), Vector2.zero, Vector2.zero);
@@ -558,16 +710,136 @@ namespace UnifyCountry.UI
             }
         }
 
+        private readonly struct FormationMove
+        {
+            public FormationMove(int unitRuntimeId, int fromSlotIndex, int toSlotIndex)
+            {
+                UnitRuntimeId = unitRuntimeId;
+                FromSlotIndex = fromSlotIndex;
+                ToSlotIndex = toSlotIndex;
+            }
+
+            public int UnitRuntimeId { get; }
+            public int FromSlotIndex { get; }
+            public int ToSlotIndex { get; }
+        }
+
+        private sealed class CardDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+        {
+            private PrototypeBattleUi owner;
+            private CardRecord card;
+            private RectTransform rectTransform;
+            private CanvasGroup canvasGroup;
+            private Vector2 startAnchoredPosition;
+            private Transform startParent;
+            private bool dropped;
+
+            public CardRecord Card => card;
+
+            public void Initialize(PrototypeBattleUi owner, CardRecord card, RectTransform rectTransform, CanvasGroup canvasGroup)
+            {
+                this.owner = owner;
+                this.card = card;
+                this.rectTransform = rectTransform;
+                this.canvasGroup = canvasGroup;
+            }
+
+            public void MarkDropped()
+            {
+                dropped = true;
+            }
+
+            public void OnBeginDrag(PointerEventData eventData)
+            {
+                if (owner == null || owner.isResolvingTurn)
+                    return;
+
+                dropped = false;
+                startParent = rectTransform.parent;
+                startAnchoredPosition = rectTransform.anchoredPosition;
+                rectTransform.SetAsLastSibling();
+                canvasGroup.blocksRaycasts = false;
+                canvasGroup.alpha = 0.85f;
+            }
+
+            public void OnDrag(PointerEventData eventData)
+            {
+                if (owner == null || owner.isResolvingTurn)
+                    return;
+
+                var canvas = GetComponentInParent<Canvas>();
+                var scaleFactor = canvas == null ? 1f : canvas.scaleFactor;
+                rectTransform.anchoredPosition += eventData.delta / Mathf.Max(0.01f, scaleFactor);
+            }
+
+            public void OnEndDrag(PointerEventData eventData)
+            {
+                if (canvasGroup != null)
+                {
+                    canvasGroup.blocksRaycasts = true;
+                    canvasGroup.alpha = 1f;
+                }
+
+                if (dropped || rectTransform == null)
+                    return;
+
+                if (startParent != null)
+                    rectTransform.SetParent(startParent, false);
+
+                rectTransform.anchoredPosition = startAnchoredPosition;
+            }
+        }
+
+        private sealed class BoardInsertDropZone : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
+        {
+            private PrototypeBattleUi owner;
+            private int insertIndex;
+            private Image image;
+            private Color normalColor;
+
+            public void Initialize(PrototypeBattleUi owner, int insertIndex, Image image)
+            {
+                this.owner = owner;
+                this.insertIndex = insertIndex;
+                this.image = image;
+                normalColor = image.color;
+            }
+
+            public void OnDrop(PointerEventData eventData)
+            {
+                var dragHandler = eventData.pointerDrag == null ? null : eventData.pointerDrag.GetComponent<CardDragHandler>();
+                if (dragHandler == null || owner == null)
+                    return;
+
+                dragHandler.MarkDropped();
+                owner.PlayCardAt(dragHandler.Card, insertIndex);
+            }
+
+            public void OnPointerEnter(PointerEventData eventData)
+            {
+                if (image != null)
+                    image.color = new Color(0.2f, 0.7f, 0.95f, 0.28f);
+            }
+
+            public void OnPointerExit(PointerEventData eventData)
+            {
+                if (image != null)
+                    image.color = normalColor;
+            }
+        }
+
         private sealed class BattleUnit
         {
             private readonly CardRecord card;
 
-            public BattleUnit(CardRecord card)
+            public BattleUnit(CardRecord card, int runtimeId)
             {
                 this.card = card;
+                RuntimeId = runtimeId;
                 CurrentHp = card.Hp;
             }
 
+            public int RuntimeId { get; }
             public string Name => card.CardName;
             public int Attack => card.Attack;
             public CardCamp Camp => card.Camp;
