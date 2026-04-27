@@ -26,12 +26,15 @@ namespace UnifyCountry.UI
         private readonly Color heroCardColor = new Color(1f, 0.82f, 0.36f);
         private readonly Color soldierCardColor = new Color(0.66f, 0.88f, 1f);
         private readonly Color enemyCardColor = new Color(1f, 0.56f, 0.5f);
+        private Sprite roundedButtonSprite;
         private const int MaxFormationSlots = 5;
         private const int MaxEnergy = 3;
+        private const int PlayerBaseMaxHp = 10;
         private const float FormationMoveDuration = 0.45f;
 
         private Dictionary<string, CardRecord> cardMap = new Dictionary<string, CardRecord>();
         private readonly List<CardRecord> drawPile = new List<CardRecord>();
+        private readonly List<CardRecord> discardPile = new List<CardRecord>();
         private readonly List<CardRecord> hand = new List<CardRecord>();
         private readonly List<BattleUnit> playerUnits = new List<BattleUnit>();
         private readonly List<BattleUnit> enemyUnits = new List<BattleUnit>();
@@ -43,9 +46,11 @@ namespace UnifyCountry.UI
         private int nextWaveIndex;
         private int nextUnitRuntimeId = 1;
         private int currentEnergy = MaxEnergy;
-        private string battleLog = "\u62d6\u52a8\u624b\u724c\u5230\u53cb\u65b9\u9635\u5730\u4e0a\u9635\uff0c\u7136\u540e\u70b9\u51fb\u7ed3\u675f\u56de\u5408\u3002";
+        private int playerBaseHp = PlayerBaseMaxHp;
+        private string battleLog = "拖动手牌到友方阵地上阵，然后点击结束回合。";
         private bool initialized;
         private bool isResolvingTurn;
+        private bool battleEnded;
 
         [ContextMenu("Rebuild Preview UI")]
         public void Rebuild()
@@ -60,6 +65,7 @@ namespace UnifyCountry.UI
         {
             StopAllCoroutines();
             isResolvingTurn = false;
+            battleEnded = false;
             initialized = false;
             InitializeBattle();
             BuildUi();
@@ -80,10 +86,16 @@ namespace UnifyCountry.UI
             waveSlots = PrototypeCsvDatabase.LoadWaveSlots(wavesCsv);
 
             drawPile.Clear();
+            discardPile.Clear();
             hand.Clear();
             playerUnits.Clear();
             enemyUnits.Clear();
+            for (var i = 0; i < MaxFormationSlots; i++)
+                playerUnits.Add(null);
+
             nextUnitRuntimeId = 1;
+            battleEnded = false;
+            playerBaseHp = PlayerBaseMaxHp;
 
             var startingDeck = PrototypeCsvDatabase.LoadStartingDeck(startingDeckCsv);
             foreach (var entry in startingDeck)
@@ -95,47 +107,62 @@ namespace UnifyCountry.UI
                     drawPile.Add(card);
             }
 
-            DrawGuaranteedFirstHand();
             turnNumber = 1;
             nextWaveIndex = 0;
             currentEnergy = MaxEnergy;
-            battleLog = "\u51c6\u5907\u9636\u6bb5\uff1a\u82f1\u96c4\u5361\u5df2\u8fdb\u5165\u9996\u56de\u5408\u624b\u724c\u3002";
+            Shuffle(drawPile);
+            DrawCards(5);
+            battleLog = "准备阶段：抽牌堆已洗牌，抽 5 张牌进入手牌。";
             initialized = true;
-        }
-
-        private void DrawGuaranteedFirstHand()
-        {
-            var heroes = drawPile.Where(card => card.UnitType == UnitType.Hero && card.Camp == CardCamp.Player).ToList();
-            foreach (var hero in heroes)
-            {
-                hand.Add(hero);
-                drawPile.Remove(hero);
-            }
-
-            while (hand.Count < 3 && drawPile.Count > 0)
-                DrawOneCard();
         }
 
         private void DrawCards(int count)
         {
             for (var i = 0; i < count; i++)
-                DrawOneCard();
+            {
+                if (!DrawOneCard())
+                    break;
+            }
         }
 
-        private void DrawOneCard()
+        private bool DrawOneCard()
         {
             if (drawPile.Count == 0)
+                RefillDrawPileFromDiscard();
+
+            if (drawPile.Count == 0)
+                return false;
+
+            var card = drawPile[0];
+            drawPile.RemoveAt(0);
+            hand.Add(card);
+            return true;
+        }
+
+        private void RefillDrawPileFromDiscard()
+        {
+            if (discardPile.Count == 0)
                 return;
 
-            var index = Random.Range(0, drawPile.Count);
-            var card = drawPile[index];
-            drawPile.RemoveAt(index);
-            hand.Add(card);
+            drawPile.AddRange(discardPile);
+            discardPile.Clear();
+            Shuffle(drawPile);
+        }
+
+        private static void Shuffle<T>(IList<T> list)
+        {
+            for (var i = list.Count - 1; i > 0; i--)
+            {
+                var swapIndex = Random.Range(0, i + 1);
+                var value = list[i];
+                list[i] = list[swapIndex];
+                list[swapIndex] = value;
+            }
         }
 
         private void PlayCard(CardRecord card)
         {
-            PlayCardAt(card, playerUnits.Count);
+            PlayCardAt(card, GetFirstEmptyPlayerSlot());
         }
 
         private void PlayCardAt(CardRecord card, int insertIndex)
@@ -146,16 +173,24 @@ namespace UnifyCountry.UI
             if (isResolvingTurn)
                 return;
 
-            if (playerUnits.Count >= MaxFormationSlots)
+            if (CountPlayerUnits() >= MaxFormationSlots)
             {
-                battleLog = "\u53cb\u65b9\u9635\u5730\u5df2\u6ee1\uff0c\u65e0\u6cd5\u7ee7\u7eed\u4e0a\u9635\u3002";
+                battleLog = "友方阵地已满，无法继续上阵。";
                 BuildUi();
                 return;
             }
 
             if (currentEnergy < card.Cost)
             {
-                battleLog = $"\u8d39\u7528\u4e0d\u8db3\uff1a{card.CardName} \u9700\u8981 {card.Cost} \u70b9\u8d39\u7528\u3002";
+                battleLog = $"费用不足：{card.CardName} 需要 {card.Cost} 点费用。";
+                BuildUi();
+                return;
+            }
+
+            insertIndex = Mathf.Clamp(insertIndex, 0, MaxFormationSlots - 1);
+            if (playerUnits[insertIndex] != null)
+            {
+                battleLog = "该阵地位置已有单位。";
                 BuildUi();
                 return;
             }
@@ -164,10 +199,210 @@ namespace UnifyCountry.UI
                 return;
 
             currentEnergy -= card.Cost;
-            insertIndex = Mathf.Clamp(insertIndex, 0, playerUnits.Count);
-            playerUnits.Insert(insertIndex, new BattleUnit(card, nextUnitRuntimeId++));
-            battleLog = $"{card.CardName} \u4e0a\u9635\uff0c\u6d88\u8017 {card.Cost} \u70b9\u8d39\u7528\u3002";
+            playerUnits[insertIndex] = new BattleUnit(card, nextUnitRuntimeId++);
+            battleLog = $"{card.CardName} 上阵，消耗 {card.Cost} 点费用。";
             BuildUi();
+        }
+
+        private void PlayCardInGap(CardRecord card, int gapIndex)
+        {
+            if (card == null || card.Camp != CardCamp.Player)
+                return;
+
+            if (isResolvingTurn)
+                return;
+
+            if (CountPlayerUnits() >= MaxFormationSlots)
+            {
+                battleLog = "友方阵地已满，无法继续上阵。";
+                BuildUi();
+                return;
+            }
+
+            if (currentEnergy < card.Cost)
+            {
+                battleLog = $"费用不足：{card.CardName} 需要 {card.Cost} 点费用。";
+                BuildUi();
+                return;
+            }
+
+            if (!hand.Remove(card))
+                return;
+
+            var unit = new BattleUnit(card, nextUnitRuntimeId++);
+            if (!TryInsertPlayerUnitAtGap(unit, gapIndex))
+            {
+                hand.Add(card);
+                battleLog = "当前插入位置不可用。";
+                BuildUi();
+                return;
+            }
+
+            currentEnergy -= card.Cost;
+            battleLog = $"{card.CardName} 插入阵地，消耗 {card.Cost} 点费用。";
+            BuildUi();
+        }
+
+        private bool TryInsertPlayerUnitAtGap(BattleUnit unit, int gapIndex)
+        {
+            var occupiedSlots = GetOccupiedPlayerSlots();
+            if (occupiedSlots.Count >= MaxFormationSlots)
+                return false;
+
+            if (occupiedSlots.Count == 0)
+            {
+                playerUnits[GetFirstEmptyPlayerSlot()] = unit;
+                return true;
+            }
+
+            gapIndex = Mathf.Clamp(gapIndex, 0, occupiedSlots.Count);
+            if (gapIndex == 0)
+                return InsertBeforeSlot(unit, occupiedSlots[0]);
+
+            if (gapIndex == occupiedSlots.Count)
+                return InsertAfterSlot(unit, occupiedSlots[occupiedSlots.Count - 1]);
+
+            return InsertBetweenSlots(unit, occupiedSlots[gapIndex - 1], occupiedSlots[gapIndex]);
+        }
+
+        private bool InsertBeforeSlot(BattleUnit unit, int slot)
+        {
+            for (var i = slot - 1; i >= 0; i--)
+            {
+                if (playerUnits[i] == null)
+                {
+                    playerUnits[i] = unit;
+                    return true;
+                }
+            }
+
+            var emptyRight = FindEmptyRight(slot);
+            if (emptyRight < 0)
+                return false;
+
+            ShiftRight(slot, emptyRight);
+            playerUnits[slot] = unit;
+            return true;
+        }
+
+        private bool InsertAfterSlot(BattleUnit unit, int slot)
+        {
+            for (var i = slot + 1; i < MaxFormationSlots; i++)
+            {
+                if (playerUnits[i] == null)
+                {
+                    playerUnits[i] = unit;
+                    return true;
+                }
+            }
+
+            var emptyLeft = FindEmptyLeft(slot);
+            if (emptyLeft < 0)
+                return false;
+
+            ShiftLeft(emptyLeft, slot);
+            playerUnits[slot] = unit;
+            return true;
+        }
+
+        private bool InsertBetweenSlots(BattleUnit unit, int leftSlot, int rightSlot)
+        {
+            for (var i = leftSlot + 1; i < rightSlot; i++)
+            {
+                if (playerUnits[i] == null)
+                {
+                    playerUnits[i] = unit;
+                    return true;
+                }
+            }
+
+            var emptyLeft = FindEmptyLeft(leftSlot);
+            var emptyRight = FindEmptyRight(rightSlot);
+
+            if (emptyRight >= 0 && (emptyLeft < 0 || emptyRight - rightSlot <= leftSlot - emptyLeft))
+            {
+                ShiftRight(rightSlot, emptyRight);
+                playerUnits[rightSlot] = unit;
+                return true;
+            }
+
+            if (emptyLeft >= 0)
+            {
+                ShiftLeft(emptyLeft, leftSlot);
+                playerUnits[leftSlot] = unit;
+                return true;
+            }
+
+            return false;
+        }
+
+        private int FindEmptyLeft(int fromSlot)
+        {
+            for (var i = fromSlot - 1; i >= 0; i--)
+            {
+                if (playerUnits[i] == null)
+                    return i;
+            }
+
+            return -1;
+        }
+
+        private int FindEmptyRight(int fromSlot)
+        {
+            for (var i = fromSlot + 1; i < MaxFormationSlots; i++)
+            {
+                if (playerUnits[i] == null)
+                    return i;
+            }
+
+            return -1;
+        }
+
+        private void ShiftRight(int fromSlot, int emptySlot)
+        {
+            for (var i = emptySlot; i > fromSlot; i--)
+                playerUnits[i] = playerUnits[i - 1];
+        }
+
+        private void ShiftLeft(int emptySlot, int toSlot)
+        {
+            for (var i = emptySlot; i < toSlot; i++)
+                playerUnits[i] = playerUnits[i + 1];
+        }
+
+        private List<int> GetOccupiedPlayerSlots()
+        {
+            var slots = new List<int>();
+            for (var i = 0; i < MaxFormationSlots; i++)
+            {
+                if (playerUnits[i] != null && !playerUnits[i].IsDead)
+                    slots.Add(i);
+            }
+
+            return slots;
+        }
+
+        private int GetFirstEmptyPlayerSlot()
+        {
+            for (var i = MaxFormationSlots - 1; i >= 0; i--)
+            {
+                if (playerUnits[i] == null)
+                    return i;
+            }
+
+            return MaxFormationSlots - 1;
+        }
+
+        private int CountPlayerUnits()
+        {
+            var count = 0;
+            foreach (var unit in playerUnits)
+            {
+                if (unit != null && !unit.IsDead)
+                    count++;
+            }
+
+            return count;
         }
 
         private void EndTurn()
@@ -183,7 +418,8 @@ namespace UnifyCountry.UI
             isResolvingTurn = true;
 
             var logLines = new List<string>();
-            logLines.Add($"\u7b2c {turnNumber} \u56de\u5408\u7ed3\u675f\u3002");
+            logLines.Add($"第 {turnNumber} 回合结束。");
+            DiscardHand(logLines);
 
             yield return StartCoroutine(AdvanceFormationsRoutine(logLines));
 
@@ -195,6 +431,15 @@ namespace UnifyCountry.UI
             ResolveEnemyAttack(logLines);
             battleLog = string.Join("\n", logLines);
             BuildUi();
+            if (playerBaseHp <= 0)
+            {
+                battleLog = string.Join("\n", logLines) + "\n大本营被攻破，战斗失败。";
+                battleEnded = true;
+                isResolvingTurn = false;
+                BuildUi();
+                yield break;
+            }
+
             yield return new WaitForSeconds(0.75f);
 
             ResolvePlayerAttack(logLines);
@@ -204,7 +449,8 @@ namespace UnifyCountry.UI
 
             if (enemyUnits.Count == 0 && nextWaveIndex >= waveSlots.Count)
             {
-                battleLog = string.Join("\n", logLines) + "\n\u6218\u6597\u80dc\u5229\uff01";
+                battleLog = string.Join("\n", logLines) + "\n战斗胜利！";
+                battleEnded = true;
                 isResolvingTurn = false;
                 BuildUi();
                 yield break;
@@ -212,11 +458,36 @@ namespace UnifyCountry.UI
 
             turnNumber++;
             currentEnergy = MaxEnergy;
-            DrawCards(3);
-            logLines.Add($"\u8fdb\u5165\u7b2c {turnNumber} \u56de\u5408\uff0c\u8d39\u7528\u6062\u590d\u5230 {MaxEnergy}\uff0c\u62bd 3 \u5f20\u724c\u3002");
+            var drawCount = DrawCardsWithCount(5);
+            logLines.Add($"进入第 {turnNumber} 回合，费用恢复到 {MaxEnergy}，从抽牌堆抽 {drawCount} 张牌。");
             battleLog = string.Join("\n", logLines);
             isResolvingTurn = false;
             BuildUi();
+        }
+
+        private int DrawCardsWithCount(int count)
+        {
+            var drawn = 0;
+            for (var i = 0; i < count; i++)
+            {
+                if (!DrawOneCard())
+                    break;
+
+                drawn++;
+            }
+
+            return drawn;
+        }
+
+        private void DiscardHand(List<string> logLines)
+        {
+            if (hand.Count == 0)
+                return;
+
+            var count = hand.Count;
+            discardPile.AddRange(hand);
+            hand.Clear();
+            logLines.Add($"未使用的 {count} 张手牌进入弃牌堆。");
         }
 
         private void SpawnCurrentWave(List<string> logLines)
@@ -241,7 +512,7 @@ namespace UnifyCountry.UI
             }
 
             if (spawnedNames.Count > 0)
-                logLines.Add($"\u7b2c {nextWaveIndex} \u6ce2\u51fa\u73b0\uff1a{string.Join("\u3001", spawnedNames)}\u3002");
+                logLines.Add($"第 {nextWaveIndex} 波出现：{string.Join("、", spawnedNames)}。");
         }
 
         private void ResolveEnemyAttack(List<string> logLines)
@@ -254,12 +525,16 @@ namespace UnifyCountry.UI
                 var target = GetPlayerFrontUnit();
                 if (target == null)
                 {
-                    logLines.Add("\u53cb\u65b9\u9635\u5730\u65e0\u5355\u4f4d\uff0c\u654c\u65b9\u6682\u65e0\u76ee\u6807\u3002");
-                    return;
+                    playerBaseHp = Mathf.Max(0, playerBaseHp - attacker.Attack);
+                    logLines.Add($"{attacker.Name} 攻击大本营，造成 {attacker.Attack} 点伤害。");
+                    if (playerBaseHp <= 0)
+                        return;
+
+                    continue;
                 }
 
                 target.TakeDamage(attacker.Attack);
-                logLines.Add($"{attacker.Name} \u653b\u51fb {target.Name}\uff0c\u9020\u6210 {attacker.Attack} \u70b9\u4f24\u5bb3\u3002");
+                logLines.Add($"{attacker.Name} 攻击 {target.Name}，造成 {attacker.Attack} 点伤害。");
             }
         }
 
@@ -268,7 +543,7 @@ namespace UnifyCountry.UI
             for (var i = playerUnits.Count - 1; i >= 0; i--)
             {
                 var attacker = playerUnits[i];
-                if (attacker.IsDead)
+                if (attacker == null || attacker.IsDead)
                     continue;
 
                 var target = GetEnemyFrontUnit();
@@ -276,7 +551,7 @@ namespace UnifyCountry.UI
                     return;
 
                 target.TakeDamage(attacker.Attack);
-                logLines.Add($"{attacker.Name} \u53cd\u51fb {target.Name}\uff0c\u9020\u6210 {attacker.Attack} \u70b9\u4f24\u5bb3\u3002");
+                logLines.Add($"{attacker.Name} 反击 {target.Name}，造成 {attacker.Attack} 点伤害。");
             }
         }
 
@@ -284,7 +559,7 @@ namespace UnifyCountry.UI
         {
             for (var i = playerUnits.Count - 1; i >= 0; i--)
             {
-                if (!playerUnits[i].IsDead)
+                if (playerUnits[i] != null && !playerUnits[i].IsDead)
                     return playerUnits[i];
             }
 
@@ -311,7 +586,7 @@ namespace UnifyCountry.UI
             if (moves.Count == 0)
                 yield break;
 
-            logLines.Add("\u9635\u578b\u5411\u524d\u8865\u4f4d\u3002");
+            logLines.Add("阵型向前补位。");
             battleLog = string.Join("\n", logLines);
 
             animatedSlotOverrides.Clear();
@@ -332,16 +607,31 @@ namespace UnifyCountry.UI
             for (var i = 0; i < units.Count; i++)
             {
                 var unit = units[i];
-                if (!unit.IsDead)
+                if (unit != null && !unit.IsDead)
                     oldSlots[unit.RuntimeId] = GetVisualSlotIndex(playerSide, i, units.Count);
             }
 
-            units.RemoveAll(unit => unit.IsDead);
+            if (playerSide)
+            {
+                var aliveUnits = units.Where(unit => unit != null && !unit.IsDead).ToList();
+                units.Clear();
+                for (var i = 0; i < MaxFormationSlots - aliveUnits.Count; i++)
+                    units.Add(null);
+
+                units.AddRange(aliveUnits);
+            }
+            else
+            {
+                units.RemoveAll(unit => unit == null || unit.IsDead);
+            }
 
             var moves = new List<FormationMove>();
             for (var i = 0; i < units.Count; i++)
             {
                 var unit = units[i];
+                if (unit == null)
+                    continue;
+
                 var toSlot = GetVisualSlotIndex(playerSide, i, units.Count);
                 if (oldSlots.TryGetValue(unit.RuntimeId, out var fromSlot) && fromSlot != toSlot)
                     moves.Add(new FormationMove(unit.RuntimeId, fromSlot, toSlot));
@@ -394,13 +684,13 @@ namespace UnifyCountry.UI
             foreach (var unit in enemyUnits)
             {
                 if (unit.IsDead)
-                    logLines.Add($"{unit.Name} \u9635\u4ea1\u3002");
+                    logLines.Add($"{unit.Name} 阵亡。");
             }
 
             foreach (var unit in playerUnits)
             {
-                if (unit.IsDead)
-                    logLines.Add($"{unit.Name} \u9635\u4ea1\u3002");
+                if (unit != null && unit.IsDead)
+                    logLines.Add($"{unit.Name} 阵亡。");
             }
         }
 
@@ -413,37 +703,48 @@ namespace UnifyCountry.UI
             EnsureEventSystem();
             CreateBackground(canvas.transform);
 
-            var title = CreateText(canvas.transform, "\u4e09\u56fd\u5361\u724c\u6218\u7ebf - \u53ef\u73a9\u539f\u578b", 38, TextAnchor.MiddleCenter, Color.white);
-            SetRect(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -42f), new Vector2(760f, 56f));
+            var status = CreateText(canvas.transform, $"第 {turnNumber} 回合  |  下一波 {Mathf.Min(nextWaveIndex + 1, waveSlots.Count)} / {waveSlots.Count}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
+            SetRect(status.rectTransform, new Vector2(0.18f, 0.91f), new Vector2(0.82f, 0.97f), Vector2.zero, Vector2.zero);
 
-            var status = CreateText(canvas.transform, $"\u7b2c {turnNumber} \u56de\u5408  |  \u8d39\u7528 {currentEnergy}/{MaxEnergy}  |  \u724c\u5e93 {drawPile.Count}  |  \u624b\u724c {hand.Count}  |  \u4e0b\u4e00\u6ce2 {Mathf.Min(nextWaveIndex + 1, waveSlots.Count)} / {waveSlots.Count}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
-            SetRect(status.rectTransform, new Vector2(0.18f, 0.895f), new Vector2(0.82f, 0.945f), Vector2.zero, Vector2.zero);
-
-            var playerPanel = CreatePanel(canvas.transform, "\u53cb\u65b9\u9635\u5730", playerPanelColor);
+            var playerPanel = CreatePanel(canvas.transform, "友方阵地", playerPanelColor);
             SetRect(playerPanel, new Vector2(0.02f, 0.31f), new Vector2(0.49f, 0.88f), Vector2.zero, Vector2.zero);
+            BuildPlayerBase(playerPanel.transform);
             BuildBoard(playerPanel.transform, true, playerUnits);
 
-            var enemyPanel = CreatePanel(canvas.transform, "\u654c\u65b9\u9635\u5730", enemyPanelColor);
+            var enemyPanel = CreatePanel(canvas.transform, "敌方阵地", enemyPanelColor);
             SetRect(enemyPanel, new Vector2(0.51f, 0.31f), new Vector2(0.98f, 0.88f), Vector2.zero, Vector2.zero);
             BuildBoard(enemyPanel.transform, false, enemyUnits);
             BuildUpcomingWaveHint(enemyPanel.transform);
 
-            var handPanel = CreatePanel(canvas.transform, "\u624b\u724c\uff08\u62d6\u5165\u53cb\u65b9\u9635\u5730\u4e0a\u9635\uff09", handPanelColor);
-            SetRect(handPanel, new Vector2(0.02f, 0.03f), new Vector2(0.73f, 0.28f), Vector2.zero, Vector2.zero);
+            var drawPilePanel = CreateInfoBlock(canvas.transform, "抽牌堆", drawPile.Count.ToString(), new Color(0.72f, 0.84f, 0.95f));
+            SetRect(drawPilePanel, new Vector2(0.02f, 0.03f), new Vector2(0.1f, 0.28f), Vector2.zero, Vector2.zero);
+
+            var energyPanel = CreateInfoBlock(canvas.transform, "费用", $"{currentEnergy}/{MaxEnergy}", new Color(0.98f, 0.8f, 0.38f));
+            SetRect(energyPanel, new Vector2(0.115f, 0.03f), new Vector2(0.19f, 0.28f), Vector2.zero, Vector2.zero);
+
+            var handPanel = CreatePanel(canvas.transform, "手牌", handPanelColor);
+            SetRect(handPanel, new Vector2(0.205f, 0.03f), new Vector2(0.635f, 0.28f), Vector2.zero, Vector2.zero);
             BuildHand(handPanel.transform);
 
-            var logPanel = CreatePanel(canvas.transform, "\u6218\u6597\u8bb0\u5f55", new Color(0.93f, 0.84f, 0.64f));
-            SetRect(logPanel, new Vector2(0.75f, 0.03f), new Vector2(0.98f, 0.28f), Vector2.zero, Vector2.zero);
+            var discardPilePanel = CreateInfoBlock(canvas.transform, "弃牌堆", discardPile.Count.ToString(), new Color(0.78f, 0.72f, 0.88f));
+            SetRect(discardPilePanel, new Vector2(0.65f, 0.03f), new Vector2(0.73f, 0.28f), Vector2.zero, Vector2.zero);
+
+            var logPanel = CreatePanel(canvas.transform, "战斗记录", new Color(0.93f, 0.84f, 0.64f));
+            SetRect(logPanel, new Vector2(0.75f, 0.12f), new Vector2(0.98f, 0.28f), Vector2.zero, Vector2.zero);
             var logText = CreateText(logPanel.transform, battleLog, 18, TextAnchor.UpperLeft, new Color(0.18f, 0.12f, 0.08f));
-            SetRect(logText.rectTransform, new Vector2(0.06f, 0.08f), new Vector2(0.94f, 0.78f), Vector2.zero, Vector2.zero);
+            SetRect(logText.rectTransform, new Vector2(0.06f, 0.08f), new Vector2(0.94f, 0.7f), Vector2.zero, Vector2.zero);
 
-            var endTurnButton = CreateButton(canvas.transform, "\u7ed3\u675f\u56de\u5408");
-            SetRect(endTurnButton.GetComponent<RectTransform>(), new Vector2(0.76f, 0.295f), new Vector2(0.87f, 0.385f), Vector2.zero, Vector2.zero);
-            endTurnButton.interactable = !isResolvingTurn;
-            endTurnButton.onClick.AddListener(EndTurn);
+            if (!battleEnded)
+            {
+                var endTurnButton = CreateButton(canvas.transform, "结束回合");
+                SetRect(endTurnButton.GetComponent<RectTransform>(), new Vector2(0.75f, 0.035f), new Vector2(0.86f, 0.1f), Vector2.zero, Vector2.zero);
+                endTurnButton.interactable = !isResolvingTurn;
+                endTurnButton.onClick.AddListener(EndTurn);
+            }
 
-            var resetButton = CreateButton(canvas.transform, "\u91cd\u5f00");
-            SetRect(resetButton.GetComponent<RectTransform>(), new Vector2(0.89f, 0.295f), new Vector2(0.98f, 0.385f), Vector2.zero, Vector2.zero);
+            var resetButton = CreateButton(canvas.transform, "重开");
+            SetRect(resetButton.GetComponent<RectTransform>(), new Vector2(battleEnded ? 0.87f : 0.88f, 0.035f), new Vector2(0.98f, 0.1f), Vector2.zero, Vector2.zero);
+            resetButton.interactable = !isResolvingTurn;
             resetButton.onClick.AddListener(ResetBattle);
         }
 
@@ -463,33 +764,105 @@ namespace UnifyCountry.UI
             for (var i = 0; i < units.Count; i++)
             {
                 var index = GetVisualSlotIndex(playerSide, i, units.Count);
-                if (animatedSlotOverrides.TryGetValue(units[i].RuntimeId, out var overrideSlot))
+                var battleUnit = units[i];
+                if (battleUnit == null)
+                    continue;
+
+                if (animatedSlotOverrides.TryGetValue(battleUnit.RuntimeId, out var overrideSlot))
                     index = overrideSlot;
 
-                var unit = CreateUnitToken(parent, units[i], false);
+                var unit = CreateUnitToken(parent, battleUnit, false);
                 SetRect(unit, GetUnitAnchorMin(index), GetUnitAnchorMax(index), Vector2.zero, Vector2.zero);
-                unitViews[units[i].RuntimeId] = unit;
+                unitViews[battleUnit.RuntimeId] = unit;
             }
 
-            if (playerSide && !isResolvingTurn && units.Count < MaxFormationSlots)
+            if (playerSide && !isResolvingTurn && CountPlayerUnits() < MaxFormationSlots)
             {
-                for (var i = 0; i <= units.Count; i++)
-                    CreatePlayerInsertDropZone(parent, i, units.Count);
+                for (var i = 0; i < MaxFormationSlots; i++)
+                {
+                    if (units[i] == null)
+                        CreatePlayerInsertDropZone(parent, i);
+                }
+
+                var occupiedSlots = GetOccupiedPlayerSlots();
+                for (var i = 0; i <= occupiedSlots.Count; i++)
+                    CreatePlayerGapDropZone(parent, i, occupiedSlots);
             }
         }
 
-        private void CreatePlayerInsertDropZone(Transform parent, int insertIndex, int unitCount)
+        private void BuildPlayerBase(Transform parent)
         {
-            var targetSlot = MaxFormationSlots - (unitCount + 1) + insertIndex;
+            var root = CreateImage(parent, "大本营", new Color(0.88f, 0.72f, 0.42f));
+            SetRect(root.rectTransform, new Vector2(0.34f, 0.73f), new Vector2(0.66f, 0.84f), Vector2.zero, Vector2.zero);
+
+            var outline = root.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.28f, 0.18f, 0.08f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            var label = CreateText(root.transform, "大本营", 18, TextAnchor.MiddleCenter, new Color(0.16f, 0.1f, 0.04f));
+            SetRect(label.rectTransform, new Vector2(0f, 0.48f), Vector2.one, Vector2.zero, Vector2.zero);
+
+            CreateHealthBar(root.transform, playerBaseHp, PlayerBaseMaxHp);
+        }
+
+        private void CreatePlayerInsertDropZone(Transform parent, int insertIndex)
+        {
             var zone = CreateImage(parent, $"Insert {insertIndex}", new Color(0.2f, 0.7f, 0.95f, 0.08f));
-            SetRect(zone.rectTransform, GetSlotAnchorMin(targetSlot), GetSlotAnchorMax(targetSlot), Vector2.zero, Vector2.zero);
+            SetRect(zone.rectTransform, GetSlotAnchorMin(insertIndex), GetSlotAnchorMax(insertIndex), Vector2.zero, Vector2.zero);
 
             var outline = zone.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0.1f, 0.45f, 0.85f, 0.55f);
             outline.effectDistance = new Vector2(2f, -2f);
 
             var dropZone = zone.gameObject.AddComponent<BoardInsertDropZone>();
-            dropZone.Initialize(this, insertIndex, zone);
+            dropZone.Initialize(this, insertIndex, false, zone);
+        }
+
+        private void CreatePlayerGapDropZone(Transform parent, int gapIndex, List<int> occupiedSlots)
+        {
+            if (occupiedSlots.Count == 0)
+                return;
+
+            var anchorMin = GetGapZoneAnchorMin(gapIndex, occupiedSlots);
+            var anchorMax = GetGapZoneAnchorMax(gapIndex, occupiedSlots);
+            var zone = CreateImage(parent, $"Gap {gapIndex}", Color.clear);
+            SetRect(zone.rectTransform, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
+            zone.transform.SetAsLastSibling();
+
+            var marker = CreateImage(zone.transform, "Insert Marker", new Color(0.02f, 0.42f, 0.18f, 0.95f));
+            SetRect(marker.rectTransform, new Vector2(0.46f, 0.08f), new Vector2(0.54f, 0.92f), Vector2.zero, Vector2.zero);
+            marker.raycastTarget = false;
+            marker.enabled = false;
+
+            var dropZone = zone.gameObject.AddComponent<BoardInsertDropZone>();
+            dropZone.Initialize(this, gapIndex, true, zone, marker);
+        }
+
+        private static Vector2 GetGapZoneAnchorMin(int gapIndex, List<int> occupiedSlots)
+        {
+            var center = GetGapZoneCenterX(gapIndex, occupiedSlots);
+            const float width = 0.07f;
+            return new Vector2(Mathf.Clamp(center - width * 0.5f, 0.02f, 0.94f), 0.18f);
+        }
+
+        private static Vector2 GetGapZoneAnchorMax(int gapIndex, List<int> occupiedSlots)
+        {
+            var center = GetGapZoneCenterX(gapIndex, occupiedSlots);
+            const float width = 0.07f;
+            return new Vector2(Mathf.Clamp(center + width * 0.5f, 0.06f, 0.98f), 0.72f);
+        }
+
+        private static float GetGapZoneCenterX(int gapIndex, List<int> occupiedSlots)
+        {
+            if (gapIndex <= 0)
+                return GetSlotAnchorMin(occupiedSlots[0]).x;
+
+            if (gapIndex >= occupiedSlots.Count)
+                return GetSlotAnchorMax(occupiedSlots[occupiedSlots.Count - 1]).x;
+
+            var left = occupiedSlots[gapIndex - 1];
+            var right = occupiedSlots[gapIndex];
+            return (GetSlotAnchorMax(left).x + GetSlotAnchorMin(right).x) * 0.5f;
         }
 
         private static int GetVisualSlotIndex(bool playerSide, int unitIndex, int unitCount)
@@ -519,7 +892,7 @@ namespace UnifyCountry.UI
 
         private void BuildUpcomingWaveHint(Transform parent)
         {
-            var hint = nextWaveIndex < waveSlots.Count ? $"\u4e0b\u6ce2\uff1a{DescribeWave(waveSlots[nextWaveIndex])}" : "\u5df2\u65e0\u540e\u7eed\u6ce2\u6b21";
+            var hint = nextWaveIndex < waveSlots.Count ? $"下波：{DescribeWave(waveSlots[nextWaveIndex])}" : "已无后续波次";
             var text = CreateText(parent, hint, 20, TextAnchor.MiddleCenter, new Color(0.22f, 0.12f, 0.1f));
             SetRect(text.rectTransform, new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.14f), Vector2.zero, Vector2.zero);
         }
@@ -533,16 +906,16 @@ namespace UnifyCountry.UI
                     names.Add(card.CardName);
             }
 
-            return names.Count == 0 ? "-" : string.Join("\u3001", names);
+            return names.Count == 0 ? "-" : string.Join("、", names);
         }
 
         private void BuildHand(Transform parent)
         {
-            for (var i = 0; i < Mathf.Min(hand.Count, 7); i++)
+            for (var i = 0; i < Mathf.Min(hand.Count, 5); i++)
             {
                 var card = hand[i];
                 var cardView = CreateCard(parent, card);
-                SetRect(cardView.GetComponent<RectTransform>(), new Vector2(0.02f + i * 0.135f, 0.12f), new Vector2(0.13f + i * 0.135f, 0.78f), Vector2.zero, Vector2.zero);
+                SetRect(cardView.GetComponent<RectTransform>(), new Vector2(0.025f + i * 0.19f, 0.12f), new Vector2(0.18f + i * 0.19f, 0.78f), Vector2.zero, Vector2.zero);
             }
         }
 
@@ -550,9 +923,9 @@ namespace UnifyCountry.UI
         {
             var color = card.UnitType == UnitType.Hero ? heroCardColor : soldierCardColor;
             var image = CreateImage(parent, card.CardName, color);
-            image.gameObject.AddComponent<Outline>().effectColor = new Color(0.22f, 0.16f, 0.1f);
 
             var button = image.gameObject.AddComponent<Button>();
+            button.transition = Selectable.Transition.None;
             button.onClick.AddListener(() => PlayCard(card));
             button.interactable = !isResolvingTurn && currentEnergy >= card.Cost;
             var canvasGroup = image.gameObject.AddComponent<CanvasGroup>();
@@ -571,14 +944,34 @@ namespace UnifyCountry.UI
             var face = CreateText(portrait.transform, string.IsNullOrEmpty(card.CardName) ? "?" : card.CardName.Substring(0, 1), 34, TextAnchor.MiddleCenter, Color.white);
             SetRect(face.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            var stats = CreateText(image.transform, $"\u653b {card.Attack}   \u8840 {card.Hp}", 20, TextAnchor.MiddleCenter, new Color(0.2f, 0.12f, 0.08f));
+            var stats = CreateText(image.transform, $"攻 {card.Attack}   血 {card.Hp}", 20, TextAnchor.MiddleCenter, new Color(0.2f, 0.12f, 0.08f));
             SetRect(stats.rectTransform, new Vector2(0.05f, 0.12f), new Vector2(0.95f, 0.31f), Vector2.zero, Vector2.zero);
 
-            var typeText = card.UnitType == UnitType.Hero ? "\u552f\u4e00" : "\u666e\u901a";
+            var typeText = card.UnitType == UnitType.Hero ? "唯一" : "普通";
             var type = CreateText(image.transform, typeText, 16, TextAnchor.MiddleCenter, Color.white);
             SetRect(type.rectTransform, new Vector2(0.68f, 0.02f), new Vector2(0.96f, 0.16f), Vector2.zero, Vector2.zero);
 
+            CreateBorder(image.transform, new Color(0.22f, 0.16f, 0.1f), 3f);
             return button;
+        }
+
+        private void CreateBorder(Transform parent, Color color, float thickness)
+        {
+            CreateBorderPart(parent, "Border Top", color, new Vector2(0f, 1f), Vector2.one, new Vector2(0f, -thickness), Vector2.zero);
+            CreateBorderPart(parent, "Border Bottom", color, Vector2.zero, new Vector2(1f, 0f), Vector2.zero, new Vector2(0f, thickness));
+            CreateBorderPart(parent, "Border Left", color, Vector2.zero, new Vector2(0f, 1f), Vector2.zero, new Vector2(thickness, 0f));
+            CreateBorderPart(parent, "Border Right", color, new Vector2(1f, 0f), Vector2.one, new Vector2(-thickness, 0f), Vector2.zero);
+        }
+
+        private void CreateBorderPart(Transform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var border = CreateImage(parent, name, color);
+            border.raycastTarget = false;
+            border.rectTransform.anchorMin = anchorMin;
+            border.rectTransform.anchorMax = anchorMax;
+            border.rectTransform.offsetMin = offsetMin;
+            border.rectTransform.offsetMax = offsetMax;
+            border.transform.SetAsLastSibling();
         }
 
         private RectTransform CreateUnitToken(Transform parent, BattleUnit unit, bool compact)
@@ -589,25 +982,25 @@ namespace UnifyCountry.UI
             var name = CreateText(root.transform, unit.Name, compact ? 17 : 18, TextAnchor.MiddleCenter, new Color(0.12f, 0.08f, 0.05f));
             SetRect(name.rectTransform, new Vector2(0f, 0.56f), Vector2.one, Vector2.zero, Vector2.zero);
 
-            var attack = CreateText(root.transform, $"\u653b {unit.Attack}", compact ? 15 : 16, TextAnchor.MiddleCenter, new Color(0.18f, 0.1f, 0.06f));
+            var attack = CreateText(root.transform, $"攻 {unit.Attack}", compact ? 15 : 16, TextAnchor.MiddleCenter, new Color(0.18f, 0.1f, 0.06f));
             SetRect(attack.rectTransform, new Vector2(0f, 0.32f), new Vector2(1f, 0.52f), Vector2.zero, Vector2.zero);
 
-            CreateHealthBar(root.transform, unit);
+            CreateHealthBar(root.transform, unit.CurrentHp, unit.MaxHp);
 
             return root.rectTransform;
         }
 
-        private void CreateHealthBar(Transform parent, BattleUnit unit)
+        private void CreateHealthBar(Transform parent, int currentHp, int maxHp)
         {
             var frame = CreateImage(parent, "Health Bar", new Color(0.22f, 0.04f, 0.035f));
             SetRect(frame.rectTransform, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.27f), Vector2.zero, Vector2.zero);
             frame.gameObject.AddComponent<Outline>().effectColor = new Color(0.08f, 0.02f, 0.015f);
 
             var fill = CreateImage(frame.transform, "Health Fill", new Color(0.83f, 0.08f, 0.06f));
-            var hpRatio = unit.MaxHp <= 0 ? 0f : Mathf.Clamp01((float)unit.CurrentHp / unit.MaxHp);
+            var hpRatio = maxHp <= 0 ? 0f : Mathf.Clamp01((float)currentHp / maxHp);
             SetRect(fill.rectTransform, Vector2.zero, new Vector2(hpRatio, 1f), Vector2.zero, Vector2.zero);
 
-            var text = CreateText(frame.transform, $"{unit.CurrentHp}/{unit.MaxHp}", 15, TextAnchor.MiddleCenter, Color.white);
+            var text = CreateText(frame.transform, $"{currentHp}/{maxHp}", 15, TextAnchor.MiddleCenter, Color.white);
             SetRect(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
         }
 
@@ -622,16 +1015,72 @@ namespace UnifyCountry.UI
             return badge.rectTransform;
         }
 
+        private RectTransform CreateInfoBlock(Transform parent, string title, string value, Color color)
+        {
+            var block = CreatePanel(parent, title, color);
+
+            var valueText = CreateText(block.transform, value, 34, TextAnchor.MiddleCenter, new Color(0.16f, 0.1f, 0.05f));
+            SetRect(valueText.rectTransform, new Vector2(0.08f, 0.18f), new Vector2(0.92f, 0.68f), Vector2.zero, Vector2.zero);
+
+            return block;
+        }
+
         private Button CreateButton(Transform parent, string label)
         {
-            var image = CreateImage(parent, label, new Color(0.9f, 0.28f, 0.21f));
-            image.gameObject.AddComponent<Outline>().effectColor = new Color(0.22f, 0.12f, 0.08f);
+            var image = CreateImage(parent, label, new Color(0.84f, 0.24f, 0.18f));
+            image.sprite = GetRoundedButtonSprite();
+            image.type = Image.Type.Sliced;
 
             var button = image.gameObject.AddComponent<Button>();
-            var text = CreateText(image.transform, label, 28, TextAnchor.MiddleCenter, Color.white);
+            button.transition = Selectable.Transition.ColorTint;
+            button.colors = new ColorBlock
+            {
+                normalColor = new Color(0.84f, 0.24f, 0.18f),
+                highlightedColor = new Color(0.96f, 0.36f, 0.26f),
+                pressedColor = new Color(0.64f, 0.15f, 0.12f),
+                selectedColor = new Color(0.84f, 0.24f, 0.18f),
+                disabledColor = new Color(0.48f, 0.44f, 0.4f),
+                colorMultiplier = 1f,
+                fadeDuration = 0.08f
+            };
+
+            var outline = image.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.16f, 0.08f, 0.05f, 0.75f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            var text = CreateText(image.transform, label, 21, TextAnchor.MiddleCenter, Color.white);
             SetRect(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             return button;
+        }
+
+        private Sprite GetRoundedButtonSprite()
+        {
+            if (roundedButtonSprite != null)
+                return roundedButtonSprite;
+
+            const int size = 32;
+            const int radius = 9;
+            var texture = new Texture2D(size, size, TextureFormat.ARGB32, false);
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+
+            var pixels = new Color[size * size];
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var dx = x < radius ? radius - x : x >= size - radius ? x - (size - radius - 1) : 0;
+                    var dy = y < radius ? radius - y : y >= size - radius ? y - (size - radius - 1) : 0;
+                    var inside = dx * dx + dy * dy <= radius * radius;
+                    pixels[y * size + x] = inside ? Color.white : Color.clear;
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            roundedButtonSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
+            return roundedButtonSprite;
         }
 
         private Image CreateImage(Transform parent, string name, Color color)
@@ -764,6 +1213,7 @@ namespace UnifyCountry.UI
             private Vector2 startAnchoredPosition;
             private Transform startParent;
             private bool dropped;
+            private bool isDragging;
 
             public CardRecord Card => card;
 
@@ -782,9 +1232,11 @@ namespace UnifyCountry.UI
 
             public void OnBeginDrag(PointerEventData eventData)
             {
-                if (owner == null || owner.isResolvingTurn)
+                isDragging = false;
+                if (owner == null || owner.isResolvingTurn || owner.currentEnergy < card.Cost)
                     return;
 
+                isDragging = true;
                 dropped = false;
                 startParent = rectTransform.parent;
                 startAnchoredPosition = rectTransform.anchoredPosition;
@@ -795,7 +1247,7 @@ namespace UnifyCountry.UI
 
             public void OnDrag(PointerEventData eventData)
             {
-                if (owner == null || owner.isResolvingTurn)
+                if (!isDragging || owner == null || owner.isResolvingTurn)
                     return;
 
                 var canvas = GetComponentInParent<Canvas>();
@@ -805,6 +1257,10 @@ namespace UnifyCountry.UI
 
             public void OnEndDrag(PointerEventData eventData)
             {
+                if (!isDragging)
+                    return;
+
+                isDragging = false;
                 if (canvasGroup != null)
                 {
                     canvasGroup.blocksRaycasts = true;
@@ -825,14 +1281,18 @@ namespace UnifyCountry.UI
         {
             private PrototypeBattleUi owner;
             private int insertIndex;
+            private bool insertAsGap;
             private Image image;
+            private Image marker;
             private Color normalColor;
 
-            public void Initialize(PrototypeBattleUi owner, int insertIndex, Image image)
+            public void Initialize(PrototypeBattleUi owner, int insertIndex, bool insertAsGap, Image image, Image marker = null)
             {
                 this.owner = owner;
                 this.insertIndex = insertIndex;
+                this.insertAsGap = insertAsGap;
                 this.image = image;
+                this.marker = marker;
                 normalColor = image.color;
             }
 
@@ -843,11 +1303,25 @@ namespace UnifyCountry.UI
                     return;
 
                 dragHandler.MarkDropped();
-                owner.PlayCardAt(dragHandler.Card, insertIndex);
+                if (insertAsGap)
+                    owner.PlayCardInGap(dragHandler.Card, insertIndex);
+                else
+                    owner.PlayCardAt(dragHandler.Card, insertIndex);
             }
 
             public void OnPointerEnter(PointerEventData eventData)
             {
+                if (insertAsGap)
+                {
+                    if (image != null)
+                        image.color = new Color(0.1f, 0.85f, 0.38f, 0.08f);
+
+                    if (marker != null)
+                        marker.enabled = true;
+
+                    return;
+                }
+
                 if (image != null)
                     image.color = new Color(0.2f, 0.7f, 0.95f, 0.28f);
             }
@@ -856,6 +1330,9 @@ namespace UnifyCountry.UI
             {
                 if (image != null)
                     image.color = normalColor;
+
+                if (marker != null)
+                    marker.enabled = false;
             }
         }
 
@@ -885,3 +1362,4 @@ namespace UnifyCountry.UI
         }
     }
 }
+
