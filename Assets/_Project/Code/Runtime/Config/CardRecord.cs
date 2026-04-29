@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace UnifyCountry.Config
 {
     public enum CardCamp
@@ -26,5 +28,25 @@ namespace UnifyCountry.Config
         public string Faction;
         public int MaxCopiesInDeck;
         public string DescriptionKey;
+    }
+
+    public sealed class WaveSpawnRecord
+    {
+        public string WaveId;
+        public int TurnIndex;
+        public string SpawnTiming;
+        public readonly List<string>[] RowCardIds =
+        {
+            new List<string>(),
+            new List<string>(),
+            new List<string>()
+        };
+        public string NoteKey;
+    }
+
+    public sealed class BattleLevelRecord
+    {
+        public string LevelId;
+        public readonly List<WaveSpawnRecord> Waves = new List<WaveSpawnRecord>();
     }
 }

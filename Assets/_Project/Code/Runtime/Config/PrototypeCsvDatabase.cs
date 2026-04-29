@@ -59,32 +59,59 @@ namespace UnifyCountry.Config
             return deck;
         }
 
-        public static List<List<string>> LoadWaveSlots(TextAsset wavesCsv)
+        public static List<BattleLevelRecord> LoadBattleLevels(TextAsset wavesCsv)
         {
-            var waves = new List<List<string>>();
+            var levels = new List<BattleLevelRecord>();
             if (wavesCsv == null)
-                return waves;
+                return levels;
 
+            var levelMap = new Dictionary<string, BattleLevelRecord>();
             var rows = ReadRows(wavesCsv.text);
             for (var i = 1; i < rows.Count; i++)
             {
                 var row = rows[i];
-                if (row.Count < 5)
+                if (row.Count < 8)
                     continue;
 
-                var slots = new List<string>();
-                AddIfNotEmpty(slots, row[3]);
-                AddIfNotEmpty(slots, row[4]);
-                waves.Add(slots);
+                var levelId = row[0];
+                if (string.IsNullOrWhiteSpace(levelId))
+                    continue;
+
+                if (!levelMap.TryGetValue(levelId, out var level))
+                {
+                    level = new BattleLevelRecord { LevelId = levelId };
+                    levelMap[levelId] = level;
+                    levels.Add(level);
+                }
+
+                var wave = new WaveSpawnRecord
+                {
+                    WaveId = row[1],
+                    TurnIndex = ParseInt(row[2]),
+                    SpawnTiming = row[3],
+                    NoteKey = row[7]
+                };
+
+                AddCardIds(wave.RowCardIds[0], row[4]);
+                AddCardIds(wave.RowCardIds[1], row[5]);
+                AddCardIds(wave.RowCardIds[2], row[6]);
+                level.Waves.Add(wave);
             }
 
-            return waves;
+            return levels;
         }
 
-        private static void AddIfNotEmpty(List<string> values, string value)
+        private static void AddCardIds(List<string> values, string value)
         {
-            if (!string.IsNullOrWhiteSpace(value))
-                values.Add(value.Trim());
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            var ids = value.Split('|');
+            foreach (var id in ids)
+            {
+                if (!string.IsNullOrWhiteSpace(id))
+                    values.Add(id.Trim());
+            }
         }
 
         private static int ParseInt(string value)

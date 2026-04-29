@@ -1,4 +1,7 @@
-wave_id,turn_index,spawn_timing,enemy_slot_1_card_id,enemy_slot_2_card_id,note_key
-WAVE_001,1,AfterPlayerEndTurn,CARD_009,,wave_001_knife_soldier
-WAVE_002,2,AfterPlayerEndTurn,CARD_010,,wave_002_cavalry
-WAVE_003,3,AfterPlayerEndTurn,CARD_006,,wave_003_caocao
+level_id,wave_id,turn_index,spawn_timing,row_1_card_ids,row_2_card_ids,row_3_card_ids,note_key
+LEVEL_001,WAVE_001,1,AfterPlayerEndTurn,,CARD_009,,level_001_wave_001_knife_soldier
+LEVEL_001,WAVE_002,2,AfterPlayerEndTurn,,CARD_010,,level_001_wave_002_cavalry
+LEVEL_001,WAVE_003,3,AfterPlayerEndTurn,,CARD_006,,level_001_wave_003_caocao
+LEVEL_002,WAVE_001,1,AfterPlayerEndTurn,CARD_009,CARD_009,,level_002_wave_001_two_knife_soldiers
+LEVEL_002,WAVE_002,2,AfterPlayerEndTurn,CARD_010,CARD_010,,level_002_wave_002_two_cavalry
+LEVEL_002,WAVE_003,3,AfterPlayerEndTurn,CARD_009,CARD_009|CARD_006,CARD_009,level_002_wave_003_knife_line_caocao

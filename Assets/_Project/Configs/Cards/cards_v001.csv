@@ -1,7 +1,7 @@
 card_id,card_name,unit_id,unit_name,unit_type,hp,attack,cost,camp,faction,max_copies_in_deck,description_key
-CARD_001,刘备,UNIT_001,刘备,Hero,7,6,2,Player,Shu,1,player_hero
-CARD_002,关羽,UNIT_002,关羽,Hero,8,8,2,Player,Shu,1,player_hero
-CARD_003,张飞,UNIT_003,张飞,Hero,10,6,2,Player,Shu,1,player_hero
+CARD_001,刘备,UNIT_001,刘备,Hero,7,6,1,Player,Shu,1,player_hero
+CARD_002,关羽,UNIT_002,关羽,Hero,8,8,1,Player,Shu,1,player_hero
+CARD_003,张飞,UNIT_003,张飞,Hero,10,6,1,Player,Shu,1,player_hero
 CARD_004,盾牌兵,UNIT_004,盾牌兵,Soldier,8,2,1,Player,Shu,99,player_soldier
 CARD_005,弓箭手,UNIT_005,弓箭手,Soldier,2,6,1,Player,Shu,99,player_soldier
 CARD_006,曹操,UNIT_006,曹操,Hero,8,5,2,Enemy,Wei,1,enemy_hero

@@ -37,6 +37,8 @@ namespace UnifyCountry.UI
         private readonly Color enemyCardColor = new Color(1f, 0.56f, 0.5f);
         private Sprite roundedButtonSprite;
         private const int MaxFormationSlots = 5;
+        private const int FormationRows = 3;
+        private const int TotalFormationSlots = MaxFormationSlots * FormationRows;
         private const int MaxEnergy = 3;
         private const int InitialHandSize = 5;
         private const int CardsDrawnPerTurn = 3;
@@ -54,9 +56,10 @@ namespace UnifyCountry.UI
         private readonly List<BattleUnit> enemyUnits = new List<BattleUnit>();
         private readonly Dictionary<int, RectTransform> unitViews = new Dictionary<int, RectTransform>();
         private readonly Dictionary<int, int> animatedSlotOverrides = new Dictionary<int, int>();
-        private List<List<string>> waveSlots = new List<List<string>>();
+        private List<BattleLevelRecord> levels = new List<BattleLevelRecord>();
 
         private int turnNumber = 1;
+        private int currentLevelIndex;
         private int nextWaveIndex;
         private int nextUnitRuntimeId = 1;
         private int currentEnergy = MaxEnergy;
@@ -85,6 +88,15 @@ namespace UnifyCountry.UI
             BuildUi();
         }
 
+        public void StartNextLevel()
+        {
+            if (currentLevelIndex + 1 >= levels.Count)
+                return;
+
+            currentLevelIndex++;
+            ResetBattle();
+        }
+
         private void Awake()
         {
             ResetBattle();
@@ -98,7 +110,8 @@ namespace UnifyCountry.UI
             var cards = PrototypeCsvDatabase.LoadCards(cardsCsv);
             cardMap = cards.ToDictionary(card => card.CardId);
             RebuildCardPortraitMap();
-            waveSlots = PrototypeCsvDatabase.LoadWaveSlots(wavesCsv);
+            levels = PrototypeCsvDatabase.LoadBattleLevels(wavesCsv);
+            currentLevelIndex = Mathf.Clamp(currentLevelIndex, 0, Mathf.Max(0, levels.Count - 1));
 
             drawPile.Clear();
             discardPile.Clear();
@@ -106,8 +119,11 @@ namespace UnifyCountry.UI
             battleLogHistory.Clear();
             playerUnits.Clear();
             enemyUnits.Clear();
-            for (var i = 0; i < MaxFormationSlots; i++)
+            for (var i = 0; i < TotalFormationSlots; i++)
+            {
                 playerUnits.Add(null);
+                enemyUnits.Add(null);
+            }
 
             nextUnitRuntimeId = 1;
             battleEnded = false;
@@ -213,7 +229,7 @@ namespace UnifyCountry.UI
             if (isResolvingTurn)
                 return;
 
-            if (CountPlayerUnits() >= MaxFormationSlots)
+            if (CountPlayerUnits() >= TotalFormationSlots)
             {
                 AddBattleLogEntry("友方阵地已满，无法继续上阵。");
                 BuildUi();
@@ -227,7 +243,7 @@ namespace UnifyCountry.UI
                 return;
             }
 
-            insertIndex = Mathf.Clamp(insertIndex, 0, MaxFormationSlots - 1);
+            insertIndex = Mathf.Clamp(insertIndex, 0, TotalFormationSlots - 1);
             if (playerUnits[insertIndex] != null)
             {
                 AddBattleLogEntry("该阵地位置已有单位。");
@@ -252,7 +268,7 @@ namespace UnifyCountry.UI
             if (isResolvingTurn)
                 return;
 
-            if (CountPlayerUnits() >= MaxFormationSlots)
+            if (CountPlayerUnits() >= TotalFormationSlots)
             {
                 AddBattleLogEntry("友方阵地已满，无法继续上阵。");
                 BuildUi();
@@ -273,7 +289,7 @@ namespace UnifyCountry.UI
             if (!TryInsertPlayerUnitAtGap(unit, gapIndex))
             {
                 hand.Add(card);
-                AddBattleLogEntry("当前插入位置不可用。");
+                AddBattleLogEntry("当前同排插入位置不可用。");
                 BuildUi();
                 return;
             }
@@ -285,138 +301,99 @@ namespace UnifyCountry.UI
 
         private bool TryInsertPlayerUnitAtGap(BattleUnit unit, int gapIndex)
         {
-            var occupiedSlots = GetOccupiedPlayerSlots();
-            if (occupiedSlots.Count >= MaxFormationSlots)
+            var row = DecodeGapRow(gapIndex);
+            var afterColumn = DecodeGapAfterColumn(gapIndex);
+            if (row < 0 || row >= FormationRows || afterColumn < 0 || afterColumn >= MaxFormationSlots)
                 return false;
 
-            if (occupiedSlots.Count == 0)
+            var rowSlots = GetOccupiedPlayerSlotsInRow(row);
+            if (rowSlots.Count >= MaxFormationSlots)
+                return false;
+
+            var afterSlot = GetSlotIndex(row, afterColumn);
+            if (playerUnits[afterSlot] == null || playerUnits[afterSlot].IsDead)
+                return false;
+
+            var targetColumn = afterColumn + 1;
+            if (targetColumn >= MaxFormationSlots)
             {
-                playerUnits[GetFirstEmptyPlayerSlot()] = unit;
+                var emptyLeft = FindEmptyLeftInRow(row, afterColumn);
+                if (emptyLeft < 0)
+                    return false;
+
+                ShiftLeftInRow(row, emptyLeft, afterColumn);
+                playerUnits[afterSlot] = unit;
                 return true;
             }
 
-            gapIndex = Mathf.Clamp(gapIndex, 0, occupiedSlots.Count);
-            if (gapIndex == 0)
-                return InsertBeforeSlot(unit, occupiedSlots[0]);
-
-            if (gapIndex == occupiedSlots.Count)
-                return InsertAfterSlot(unit, occupiedSlots[occupiedSlots.Count - 1]);
-
-            return InsertBetweenSlots(unit, occupiedSlots[gapIndex - 1], occupiedSlots[gapIndex]);
-        }
-
-        private bool InsertBeforeSlot(BattleUnit unit, int slot)
-        {
-            for (var i = slot - 1; i >= 0; i--)
+            var targetSlot = GetSlotIndex(row, targetColumn);
+            if (playerUnits[targetSlot] == null)
             {
-                if (playerUnits[i] == null)
-                {
-                    playerUnits[i] = unit;
-                    return true;
-                }
-            }
-
-            var emptyRight = FindEmptyRight(slot);
-            if (emptyRight < 0)
-                return false;
-
-            ShiftRight(slot, emptyRight);
-            playerUnits[slot] = unit;
-            return true;
-        }
-
-        private bool InsertAfterSlot(BattleUnit unit, int slot)
-        {
-            for (var i = slot + 1; i < MaxFormationSlots; i++)
-            {
-                if (playerUnits[i] == null)
-                {
-                    playerUnits[i] = unit;
-                    return true;
-                }
-            }
-
-            var emptyLeft = FindEmptyLeft(slot);
-            if (emptyLeft < 0)
-                return false;
-
-            ShiftLeft(emptyLeft, slot);
-            playerUnits[slot] = unit;
-            return true;
-        }
-
-        private bool InsertBetweenSlots(BattleUnit unit, int leftSlot, int rightSlot)
-        {
-            for (var i = leftSlot + 1; i < rightSlot; i++)
-            {
-                if (playerUnits[i] == null)
-                {
-                    playerUnits[i] = unit;
-                    return true;
-                }
-            }
-
-            var emptyLeft = FindEmptyLeft(leftSlot);
-            var emptyRight = FindEmptyRight(rightSlot);
-
-            if (emptyRight >= 0 && (emptyLeft < 0 || emptyRight - rightSlot <= leftSlot - emptyLeft))
-            {
-                ShiftRight(rightSlot, emptyRight);
-                playerUnits[rightSlot] = unit;
+                playerUnits[targetSlot] = unit;
                 return true;
             }
 
-            if (emptyLeft >= 0)
+            var emptyRight = FindEmptyRightInRow(row, targetColumn);
+            if (emptyRight >= 0)
             {
-                ShiftLeft(emptyLeft, leftSlot);
-                playerUnits[leftSlot] = unit;
+                ShiftRightInRow(row, targetColumn, emptyRight);
+                playerUnits[targetSlot] = unit;
+                return true;
+            }
+
+            var emptyLeftForGap = FindEmptyLeftInRow(row, afterColumn);
+            if (emptyLeftForGap >= 0)
+            {
+                ShiftLeftInRow(row, emptyLeftForGap, afterColumn);
+                playerUnits[afterSlot] = unit;
                 return true;
             }
 
             return false;
         }
 
-        private int FindEmptyLeft(int fromSlot)
+        private int FindEmptyLeftInRow(int row, int fromColumn)
         {
-            for (var i = fromSlot - 1; i >= 0; i--)
+            for (var column = fromColumn - 1; column >= 0; column--)
             {
-                if (playerUnits[i] == null)
-                    return i;
+                if (playerUnits[GetSlotIndex(row, column)] == null)
+                    return column;
             }
 
             return -1;
         }
 
-        private int FindEmptyRight(int fromSlot)
+        private int FindEmptyRightInRow(int row, int fromColumn)
         {
-            for (var i = fromSlot + 1; i < MaxFormationSlots; i++)
+            for (var column = fromColumn + 1; column < MaxFormationSlots; column++)
             {
-                if (playerUnits[i] == null)
-                    return i;
+                if (playerUnits[GetSlotIndex(row, column)] == null)
+                    return column;
             }
 
             return -1;
         }
 
-        private void ShiftRight(int fromSlot, int emptySlot)
+        private void ShiftRightInRow(int row, int fromColumn, int emptyColumn)
         {
-            for (var i = emptySlot; i > fromSlot; i--)
-                playerUnits[i] = playerUnits[i - 1];
+            for (var column = emptyColumn; column > fromColumn; column--)
+                playerUnits[GetSlotIndex(row, column)] = playerUnits[GetSlotIndex(row, column - 1)];
         }
 
-        private void ShiftLeft(int emptySlot, int toSlot)
+        private void ShiftLeftInRow(int row, int emptyColumn, int toColumn)
         {
-            for (var i = emptySlot; i < toSlot; i++)
-                playerUnits[i] = playerUnits[i + 1];
+            for (var column = emptyColumn; column < toColumn; column++)
+                playerUnits[GetSlotIndex(row, column)] = playerUnits[GetSlotIndex(row, column + 1)];
         }
 
-        private List<int> GetOccupiedPlayerSlots()
+        private List<int> GetOccupiedPlayerSlotsInRow(int row)
         {
             var slots = new List<int>();
-            for (var i = 0; i < MaxFormationSlots; i++)
+            for (var column = 0; column < MaxFormationSlots; column++)
             {
-                if (playerUnits[i] != null && !playerUnits[i].IsDead)
-                    slots.Add(i);
+                var slot = GetSlotIndex(row, column);
+                if (playerUnits[slot] != null && !playerUnits[slot].IsDead)
+                    slots.Add(slot);
             }
 
             return slots;
@@ -424,13 +401,33 @@ namespace UnifyCountry.UI
 
         private int GetFirstEmptyPlayerSlot()
         {
-            for (var i = MaxFormationSlots - 1; i >= 0; i--)
+            var preferredRows = new[] { 1, 0, 2 };
+            foreach (var row in preferredRows)
             {
-                if (playerUnits[i] == null)
-                    return i;
+                for (var column = MaxFormationSlots - 1; column >= 0; column--)
+                {
+                    var slotIndex = GetSlotIndex(row, column);
+                    if (playerUnits[slotIndex] == null)
+                        return slotIndex;
+                }
             }
 
-            return MaxFormationSlots - 1;
+            return GetSlotIndex(1, MaxFormationSlots - 1);
+        }
+
+        private int GetFirstEmptyEnemySlotInRow(int row)
+        {
+            if (row < 0 || row >= FormationRows)
+                return -1;
+
+            for (var column = 0; column < MaxFormationSlots; column++)
+            {
+                var slotIndex = GetSlotIndex(row, column);
+                if (enemyUnits[slotIndex] == null)
+                    return slotIndex;
+            }
+
+            return -1;
         }
 
         private int CountPlayerUnits()
@@ -444,6 +441,24 @@ namespace UnifyCountry.UI
 
             return count;
         }
+
+        private int CountEnemyUnits()
+        {
+            var count = 0;
+            foreach (var unit in enemyUnits)
+            {
+                if (unit != null && !unit.IsDead)
+                    count++;
+            }
+
+            return count;
+        }
+
+        private BattleLevelRecord CurrentLevel => levels.Count == 0 ? null : levels[currentLevelIndex];
+
+        private List<WaveSpawnRecord> CurrentWaves => CurrentLevel == null ? null : CurrentLevel.Waves;
+
+        private bool HasNextLevel => currentLevelIndex + 1 < levels.Count;
 
         private void EndTurn()
         {
@@ -489,9 +504,10 @@ namespace UnifyCountry.UI
 
             yield return StartCoroutine(AdvanceFormationsRoutine(logLines));
 
-            if (enemyUnits.Count == 0 && nextWaveIndex >= waveSlots.Count)
+            var waves = CurrentWaves;
+            if (CountEnemyUnits() == 0 && (waves == null || nextWaveIndex >= waves.Count))
             {
-                logLines.Add("战斗胜利！");
+                logLines.Add(HasNextLevel ? $"第 {currentLevelIndex + 1} 关胜利！" : "战斗胜利！");
                 CommitTurnLog(logLines);
                 battleEnded = true;
                 isResolvingTurn = false;
@@ -595,86 +611,100 @@ namespace UnifyCountry.UI
 
         private void SpawnCurrentWave(List<string> logLines)
         {
-            if (nextWaveIndex >= waveSlots.Count)
+            var waves = CurrentWaves;
+            if (waves == null || nextWaveIndex >= waves.Count)
                 return;
 
-            var wave = waveSlots[nextWaveIndex];
+            var wave = waves[nextWaveIndex];
             nextWaveIndex++;
 
             var spawnedNames = new List<string>();
-            foreach (var cardId in wave)
+            for (var row = 0; row < Mathf.Min(FormationRows, wave.RowCardIds.Length); row++)
             {
-                if (enemyUnits.Count >= MaxFormationSlots)
-                    break;
+                foreach (var cardId in wave.RowCardIds[row])
+                {
+                    var spawnSlot = GetFirstEmptyEnemySlotInRow(row);
+                    if (spawnSlot < 0)
+                        break;
 
-                if (!cardMap.TryGetValue(cardId, out var card))
-                    continue;
+                    if (!cardMap.TryGetValue(cardId, out var card))
+                        continue;
 
-                enemyUnits.Add(new BattleUnit(card, nextUnitRuntimeId++));
-                spawnedNames.Add(card.CardName);
+                    enemyUnits[spawnSlot] = new BattleUnit(card, nextUnitRuntimeId++);
+                    spawnedNames.Add($"{card.CardName}(第 {row + 1} 排)");
+                }
             }
 
             if (spawnedNames.Count > 0)
-                logLines.Add($"第 {nextWaveIndex} 波出现：{string.Join("、", spawnedNames)}。");
+                logLines.Add($"第 {currentLevelIndex + 1} 关第 {nextWaveIndex} 波出现：{string.Join("、", spawnedNames)}。");
         }
 
         private void ResolveEnemyAttack(List<string> logLines)
         {
-            foreach (var attacker in enemyUnits.ToList())
+            for (var row = 0; row < FormationRows; row++)
             {
-                if (attacker.IsDead)
-                    continue;
-
-                var target = GetPlayerFrontUnit();
-                if (target == null)
+                for (var column = 0; column < MaxFormationSlots; column++)
                 {
-                    playerBaseHp = Mathf.Max(0, playerBaseHp - attacker.Attack);
-                    logLines.Add($"{attacker.Name} 攻击大本营，造成 {attacker.Attack} 点伤害。");
-                    if (playerBaseHp <= 0)
-                        return;
+                    var attacker = enemyUnits[GetSlotIndex(row, column)];
+                    if (attacker == null || attacker.IsDead)
+                        continue;
 
-                    continue;
+                    var target = GetPlayerFrontUnit(row);
+                    if (target == null)
+                    {
+                        playerBaseHp = Mathf.Max(0, playerBaseHp - attacker.Attack);
+                        logLines.Add($"{attacker.Name} 攻击第 {row + 1} 排大本营，造成 {attacker.Attack} 点伤害。");
+                        if (playerBaseHp <= 0)
+                            return;
+
+                        continue;
+                    }
+
+                    target.TakeDamage(attacker.Attack);
+                    logLines.Add($"{attacker.Name} 攻击第 {row + 1} 排 {target.Name}，造成 {attacker.Attack} 点伤害。");
                 }
-
-                target.TakeDamage(attacker.Attack);
-                logLines.Add($"{attacker.Name} 攻击 {target.Name}，造成 {attacker.Attack} 点伤害。");
             }
         }
 
         private void ResolvePlayerAttack(List<string> logLines)
         {
-            for (var i = playerUnits.Count - 1; i >= 0; i--)
+            for (var row = 0; row < FormationRows; row++)
             {
-                var attacker = playerUnits[i];
-                if (attacker == null || attacker.IsDead)
-                    continue;
+                for (var column = MaxFormationSlots - 1; column >= 0; column--)
+                {
+                    var attacker = playerUnits[GetSlotIndex(row, column)];
+                    if (attacker == null || attacker.IsDead)
+                        continue;
 
-                var target = GetEnemyFrontUnit();
-                if (target == null)
-                    return;
+                    var target = GetEnemyFrontUnit(row);
+                    if (target == null)
+                        continue;
 
-                target.TakeDamage(attacker.Attack);
-                logLines.Add($"{attacker.Name} 反击 {target.Name}，造成 {attacker.Attack} 点伤害。");
+                    target.TakeDamage(attacker.Attack);
+                    logLines.Add($"{attacker.Name} 反击第 {row + 1} 排 {target.Name}，造成 {attacker.Attack} 点伤害。");
+                }
             }
         }
 
-        private BattleUnit GetPlayerFrontUnit()
+        private BattleUnit GetPlayerFrontUnit(int row)
         {
-            for (var i = playerUnits.Count - 1; i >= 0; i--)
+            for (var column = MaxFormationSlots - 1; column >= 0; column--)
             {
-                if (playerUnits[i] != null && !playerUnits[i].IsDead)
-                    return playerUnits[i];
+                var unit = playerUnits[GetSlotIndex(row, column)];
+                if (unit != null && !unit.IsDead)
+                    return unit;
             }
 
             return null;
         }
 
-        private BattleUnit GetEnemyFrontUnit()
+        private BattleUnit GetEnemyFrontUnit(int row)
         {
-            for (var i = 0; i < enemyUnits.Count; i++)
+            for (var column = 0; column < MaxFormationSlots; column++)
             {
-                if (!enemyUnits[i].IsDead)
-                    return enemyUnits[i];
+                var unit = enemyUnits[GetSlotIndex(row, column)];
+                if (unit != null && !unit.IsDead)
+                    return unit;
             }
 
             return null;
@@ -711,21 +741,32 @@ namespace UnifyCountry.UI
             {
                 var unit = units[i];
                 if (unit != null && !unit.IsDead)
-                    oldSlots[unit.RuntimeId] = GetVisualSlotIndex(playerSide, i, units.Count);
+                    oldSlots[unit.RuntimeId] = i;
             }
 
-            if (playerSide)
+            for (var row = 0; row < FormationRows; row++)
             {
-                var aliveUnits = units.Where(unit => unit != null && !unit.IsDead).ToList();
-                units.Clear();
-                for (var i = 0; i < MaxFormationSlots - aliveUnits.Count; i++)
-                    units.Add(null);
+                var aliveUnits = new List<BattleUnit>();
+                for (var column = 0; column < MaxFormationSlots; column++)
+                {
+                    var unit = units[GetSlotIndex(row, column)];
+                    if (unit != null && !unit.IsDead)
+                        aliveUnits.Add(unit);
 
-                units.AddRange(aliveUnits);
-            }
-            else
-            {
-                units.RemoveAll(unit => unit == null || unit.IsDead);
+                    units[GetSlotIndex(row, column)] = null;
+                }
+
+                if (playerSide)
+                {
+                    var startColumn = MaxFormationSlots - aliveUnits.Count;
+                    for (var i = 0; i < aliveUnits.Count; i++)
+                        units[GetSlotIndex(row, startColumn + i)] = aliveUnits[i];
+
+                    continue;
+                }
+
+                for (var i = 0; i < aliveUnits.Count; i++)
+                    units[GetSlotIndex(row, i)] = aliveUnits[i];
             }
 
             var moves = new List<FormationMove>();
@@ -735,9 +776,8 @@ namespace UnifyCountry.UI
                 if (unit == null)
                     continue;
 
-                var toSlot = GetVisualSlotIndex(playerSide, i, units.Count);
-                if (oldSlots.TryGetValue(unit.RuntimeId, out var fromSlot) && fromSlot != toSlot)
-                    moves.Add(new FormationMove(unit.RuntimeId, fromSlot, toSlot));
+                if (oldSlots.TryGetValue(unit.RuntimeId, out var fromSlot) && fromSlot != i)
+                    moves.Add(new FormationMove(unit.RuntimeId, fromSlot, i));
             }
 
             return moves;
@@ -786,7 +826,7 @@ namespace UnifyCountry.UI
         {
             foreach (var unit in enemyUnits)
             {
-                if (unit.IsDead)
+                if (unit != null && unit.IsDead)
                     logLines.Add($"{unit.Name} 阵亡。");
             }
 
@@ -807,7 +847,10 @@ namespace UnifyCountry.UI
             EnsureEventSystem();
             CreateBackground(canvas.transform);
 
-            var status = CreateText(canvas.transform, $"第 {turnNumber} 回合  |  下一波 {Mathf.Min(nextWaveIndex + 1, waveSlots.Count)} / {waveSlots.Count}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
+            var waves = CurrentWaves;
+            var waveCount = waves == null ? 0 : waves.Count;
+            var nextWaveLabel = waveCount == 0 ? "0 / 0" : $"{Mathf.Min(nextWaveIndex + 1, waveCount)} / {waveCount}";
+            var status = CreateText(canvas.transform, $"第 {currentLevelIndex + 1} 关  |  第 {turnNumber} 回合  |  下一波 {nextWaveLabel}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
             SetRect(status.rectTransform, new Vector2(0.18f, 0.91f), new Vector2(0.82f, 0.97f), Vector2.zero, Vector2.zero);
 
             var playerPanel = CreatePanel(canvas.transform, "友方阵地", playerPanelColor);
@@ -843,6 +886,13 @@ namespace UnifyCountry.UI
                 SetRect(endTurnButton.GetComponent<RectTransform>(), new Vector2(0.75f, 0.035f), new Vector2(0.86f, 0.1f), Vector2.zero, Vector2.zero);
                 endTurnButton.interactable = !isResolvingTurn;
                 endTurnButton.onClick.AddListener(EndTurn);
+            }
+            else if (HasNextLevel)
+            {
+                var nextLevelButton = CreateButton(canvas.transform, "下一关");
+                SetRect(nextLevelButton.GetComponent<RectTransform>(), new Vector2(0.75f, 0.035f), new Vector2(0.86f, 0.1f), Vector2.zero, Vector2.zero);
+                nextLevelButton.interactable = !isResolvingTurn;
+                nextLevelButton.onClick.AddListener(StartNextLevel);
             }
 
             var resetButton = CreateButton(canvas.transform, "重开");
@@ -919,43 +969,50 @@ namespace UnifyCountry.UI
 
         private void BuildBoard(Transform parent, bool playerSide, List<BattleUnit> units)
         {
-            for (var i = 0; i < MaxFormationSlots; i++)
+            for (var row = 0; row < FormationRows; row++)
             {
-                var slot = CreateImage(parent, $"Slot {i + 1}", new Color(1f, 1f, 1f, 0.38f));
-                SetRect(slot.rectTransform, GetSlotAnchorMin(i), GetSlotAnchorMax(i), Vector2.zero, Vector2.zero);
-                slot.gameObject.AddComponent<Outline>().effectColor = new Color(0.35f, 0.25f, 0.16f);
+                for (var column = 0; column < MaxFormationSlots; column++)
+                {
+                    var slotIndex = GetSlotIndex(row, column);
+                    var slot = CreateImage(parent, $"Slot R{row + 1} C{column + 1}", GetSlotColor(row));
+                    SetRect(slot.rectTransform, GetSlotAnchorMin(slotIndex), GetSlotAnchorMax(slotIndex), Vector2.zero, Vector2.zero);
 
-                var order = playerSide ? MaxFormationSlots - i : i + 1;
-                var label = CreateText(slot.transform, order.ToString(), 18, TextAnchor.LowerCenter, new Color(0.23f, 0.16f, 0.1f));
-                SetRect(label.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                    var outline = slot.gameObject.AddComponent<Outline>();
+                    outline.effectColor = new Color(0.35f, 0.25f, 0.16f, 0.7f);
+                    outline.effectDistance = new Vector2(2f, -2f);
+
+                    var labelText = playerSide ? (MaxFormationSlots - column).ToString() : (column + 1).ToString();
+                    var label = CreateText(slot.transform, labelText, 14, TextAnchor.LowerCenter, new Color(0.23f, 0.16f, 0.1f, 0.72f));
+                    SetRect(label.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                }
             }
 
             for (var i = 0; i < units.Count; i++)
             {
-                var index = GetVisualSlotIndex(playerSide, i, units.Count);
                 var battleUnit = units[i];
                 if (battleUnit == null)
                     continue;
 
+                var index = i;
                 if (animatedSlotOverrides.TryGetValue(battleUnit.RuntimeId, out var overrideSlot))
                     index = overrideSlot;
 
                 var unit = CreateUnitToken(parent, battleUnit, false);
                 SetRect(unit, GetUnitAnchorMin(index), GetUnitAnchorMax(index), Vector2.zero, Vector2.zero);
+                unit.localScale = Vector3.one * GetDepthScale(index);
                 unitViews[battleUnit.RuntimeId] = unit;
             }
 
-            if (playerSide && !isResolvingTurn && CountPlayerUnits() < MaxFormationSlots)
+            if (playerSide && !isResolvingTurn && CountPlayerUnits() < TotalFormationSlots)
             {
-                for (var i = 0; i < MaxFormationSlots; i++)
+                for (var i = 0; i < TotalFormationSlots; i++)
                 {
                     if (units[i] == null)
                         CreatePlayerInsertDropZone(parent, i);
                 }
 
-                var occupiedSlots = GetOccupiedPlayerSlots();
-                for (var i = 0; i <= occupiedSlots.Count; i++)
-                    CreatePlayerGapDropZone(parent, i, occupiedSlots);
+                for (var row = 0; row < FormationRows; row++)
+                    CreatePlayerGapDropZonesForRow(parent, row);
             }
         }
 
@@ -987,14 +1044,28 @@ namespace UnifyCountry.UI
             dropZone.Initialize(this, insertIndex, false, zone);
         }
 
-        private void CreatePlayerGapDropZone(Transform parent, int gapIndex, List<int> occupiedSlots)
+        private void CreatePlayerGapDropZonesForRow(Transform parent, int row)
         {
-            if (occupiedSlots.Count == 0)
+            var occupiedSlots = GetOccupiedPlayerSlotsInRow(row);
+            if (occupiedSlots.Count == 0 || occupiedSlots.Count >= MaxFormationSlots)
                 return;
 
+            for (var i = 0; i < occupiedSlots.Count - 1; i++)
+            {
+                var leftColumn = GetSlotColumn(occupiedSlots[i]);
+                CreatePlayerGapDropZone(parent, row, leftColumn, occupiedSlots);
+            }
+
+            var rightmostColumn = GetSlotColumn(occupiedSlots[occupiedSlots.Count - 1]);
+            CreatePlayerGapDropZone(parent, row, rightmostColumn, occupiedSlots);
+        }
+
+        private void CreatePlayerGapDropZone(Transform parent, int row, int afterColumn, List<int> occupiedSlots)
+        {
+            var gapIndex = EncodeGapIndex(row, afterColumn);
             var anchorMin = GetGapZoneAnchorMin(gapIndex, occupiedSlots);
             var anchorMax = GetGapZoneAnchorMax(gapIndex, occupiedSlots);
-            var zone = CreateImage(parent, $"Gap {gapIndex}", Color.clear);
+            var zone = CreateImage(parent, $"Gap R{row + 1} C{afterColumn + 1}", Color.clear);
             SetRect(zone.rectTransform, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
             zone.transform.SetAsLastSibling();
 
@@ -1009,70 +1080,141 @@ namespace UnifyCountry.UI
 
         private static Vector2 GetGapZoneAnchorMin(int gapIndex, List<int> occupiedSlots)
         {
-            var center = GetGapZoneCenterX(gapIndex, occupiedSlots);
-            const float width = 0.07f;
-            return new Vector2(Mathf.Clamp(center - width * 0.5f, 0.02f, 0.94f), 0.18f);
+            var row = DecodeGapRow(gapIndex);
+            var center = GetGapZoneCenter(gapIndex, occupiedSlots);
+            const float width = 0.055f;
+            return new Vector2(Mathf.Clamp(center.x - width * 0.5f, 0.02f, 0.94f), GetSlotAnchorMin(GetSlotIndex(row, 0)).y);
         }
 
         private static Vector2 GetGapZoneAnchorMax(int gapIndex, List<int> occupiedSlots)
         {
-            var center = GetGapZoneCenterX(gapIndex, occupiedSlots);
-            const float width = 0.07f;
-            return new Vector2(Mathf.Clamp(center + width * 0.5f, 0.06f, 0.98f), 0.72f);
+            var row = DecodeGapRow(gapIndex);
+            var center = GetGapZoneCenter(gapIndex, occupiedSlots);
+            const float width = 0.055f;
+            return new Vector2(Mathf.Clamp(center.x + width * 0.5f, 0.06f, 0.98f), GetSlotAnchorMax(GetSlotIndex(row, 0)).y);
         }
 
-        private static float GetGapZoneCenterX(int gapIndex, List<int> occupiedSlots)
+        private static Vector2 GetGapZoneCenter(int gapIndex, List<int> occupiedSlots)
         {
-            if (gapIndex <= 0)
-                return GetSlotAnchorMin(occupiedSlots[0]).x;
+            var row = DecodeGapRow(gapIndex);
+            var afterColumn = DecodeGapAfterColumn(gapIndex);
+            var afterSlot = GetSlotIndex(row, afterColumn);
+            var afterMax = GetSlotAnchorMax(afterSlot);
+            var nextSlot = -1;
+            foreach (var slot in occupiedSlots)
+            {
+                if (GetSlotColumn(slot) > afterColumn)
+                {
+                    nextSlot = slot;
+                    break;
+                }
+            }
 
-            if (gapIndex >= occupiedSlots.Count)
-                return GetSlotAnchorMax(occupiedSlots[occupiedSlots.Count - 1]).x;
+            if (nextSlot >= 0)
+                return new Vector2((afterMax.x + GetSlotAnchorMin(nextSlot).x) * 0.5f, GetSlotCenter(afterSlot).y);
 
-            var left = occupiedSlots[gapIndex - 1];
-            var right = occupiedSlots[gapIndex];
-            return (GetSlotAnchorMax(left).x + GetSlotAnchorMin(right).x) * 0.5f;
+            return new Vector2(afterMax.x + 0.025f, GetSlotCenter(afterSlot).y);
         }
 
-        private static int GetVisualSlotIndex(bool playerSide, int unitIndex, int unitCount)
+        private static int EncodeGapIndex(int row, int afterColumn)
         {
-            return playerSide ? MaxFormationSlots - unitCount + unitIndex : unitIndex;
+            return row * MaxFormationSlots + afterColumn;
+        }
+
+        private static int DecodeGapRow(int gapIndex)
+        {
+            return Mathf.Clamp(gapIndex / MaxFormationSlots, 0, FormationRows - 1);
+        }
+
+        private static int DecodeGapAfterColumn(int gapIndex)
+        {
+            return Mathf.Clamp(gapIndex % MaxFormationSlots, 0, MaxFormationSlots - 1);
+        }
+
+        private static int GetSlotIndex(int row, int column)
+        {
+            return row * MaxFormationSlots + column;
+        }
+
+        private static int GetSlotRow(int slotIndex)
+        {
+            return Mathf.Clamp(slotIndex / MaxFormationSlots, 0, FormationRows - 1);
+        }
+
+        private static int GetSlotColumn(int slotIndex)
+        {
+            return Mathf.Clamp(slotIndex % MaxFormationSlots, 0, MaxFormationSlots - 1);
+        }
+
+        private static Color GetSlotColor(int row)
+        {
+            var alpha = 0.34f + row * 0.08f;
+            return new Color(1f, 1f, 1f, alpha);
+        }
+
+        private static Vector2 GetSlotCenter(int slotIndex)
+        {
+            var row = GetSlotRow(slotIndex);
+            var column = GetSlotColumn(slotIndex);
+            var rowOffset = row - 1;
+            return new Vector2(0.16f + column * 0.165f + rowOffset * 0.055f, 0.69f - row * 0.23f);
         }
 
         private static Vector2 GetSlotAnchorMin(int slotIndex)
         {
-            return new Vector2(0.05f + slotIndex * 0.18f, 0.18f);
+            var center = GetSlotCenter(slotIndex);
+            const float width = 0.074f;
+            const float height = 0.068f;
+            return new Vector2(center.x - width, center.y - height);
         }
 
         private static Vector2 GetSlotAnchorMax(int slotIndex)
         {
-            return new Vector2(0.19f + slotIndex * 0.18f, 0.72f);
+            var center = GetSlotCenter(slotIndex);
+            const float width = 0.074f;
+            const float height = 0.068f;
+            return new Vector2(center.x + width, center.y + height);
         }
 
         private static Vector2 GetUnitAnchorMin(int slotIndex)
         {
-            return new Vector2(0.065f + slotIndex * 0.18f, 0.3f);
+            var center = GetSlotCenter(slotIndex);
+            const float width = 0.058f;
+            const float height = 0.15f;
+            return new Vector2(center.x - width, center.y - height * 0.55f);
         }
 
         private static Vector2 GetUnitAnchorMax(int slotIndex)
         {
-            return new Vector2(0.175f + slotIndex * 0.18f, 0.65f);
+            var center = GetSlotCenter(slotIndex);
+            const float width = 0.058f;
+            const float height = 0.15f;
+            return new Vector2(center.x + width, center.y + height);
+        }
+
+        private static float GetDepthScale(int slotIndex)
+        {
+            return 1f;
         }
 
         private void BuildUpcomingWaveHint(Transform parent)
         {
-            var hint = nextWaveIndex < waveSlots.Count ? $"下波：{DescribeWave(waveSlots[nextWaveIndex])}" : "已无后续波次";
+            var waves = CurrentWaves;
+            var hint = waves != null && nextWaveIndex < waves.Count ? $"下波：{DescribeWave(waves[nextWaveIndex])}" : "已无后续波次";
             var text = CreateText(parent, hint, 20, TextAnchor.MiddleCenter, new Color(0.22f, 0.12f, 0.1f));
             SetRect(text.rectTransform, new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.14f), Vector2.zero, Vector2.zero);
         }
 
-        private string DescribeWave(List<string> cardIds)
+        private string DescribeWave(WaveSpawnRecord wave)
         {
             var names = new List<string>();
-            foreach (var cardId in cardIds)
+            for (var row = 0; row < Mathf.Min(FormationRows, wave.RowCardIds.Length); row++)
             {
-                if (cardMap.TryGetValue(cardId, out var card))
-                    names.Add(card.CardName);
+                foreach (var cardId in wave.RowCardIds[row])
+                {
+                    if (cardMap.TryGetValue(cardId, out var card))
+                        names.Add($"{card.CardName}(第 {row + 1} 排)");
+                }
             }
 
             return names.Count == 0 ? "-" : string.Join("、", names);
@@ -1173,6 +1315,9 @@ namespace UnifyCountry.UI
         {
             var root = CreateImage(parent, unit.Name, unit.Camp == CardCamp.Enemy ? enemyCardColor : heroCardColor);
             root.gameObject.AddComponent<Outline>().effectColor = new Color(0.22f, 0.16f, 0.1f);
+            var shadow = root.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0.08f, 0.05f, 0.03f, 0.45f);
+            shadow.effectDistance = new Vector2(6f, -8f);
 
             var name = CreateText(root.transform, unit.Name, compact ? 17 : 18, TextAnchor.MiddleCenter, new Color(0.12f, 0.08f, 0.05f));
             SetRect(name.rectTransform, new Vector2(0f, 0.56f), Vector2.one, Vector2.zero, Vector2.zero);
