@@ -2,6 +2,6 @@ level_id,wave_id,turn_index,spawn_timing,row_1_card_ids,row_2_card_ids,row_3_car
 LEVEL_001,WAVE_001,1,AfterPlayerEndTurn,,CARD_009,,level_001_wave_001_knife_soldier
 LEVEL_001,WAVE_002,2,AfterPlayerEndTurn,,CARD_010,,level_001_wave_002_cavalry
 LEVEL_001,WAVE_003,3,AfterPlayerEndTurn,,CARD_006,,level_001_wave_003_caocao
-LEVEL_002,WAVE_001,1,AfterPlayerEndTurn,CARD_009,CARD_009,,level_002_wave_001_two_knife_soldiers
-LEVEL_002,WAVE_002,2,AfterPlayerEndTurn,CARD_010,CARD_010,,level_002_wave_002_two_cavalry
+LEVEL_002,WAVE_001,1,AfterPlayerEndTurn,,CARD_009,CARD_009,level_002_wave_001_two_knife_soldiers
+LEVEL_002,WAVE_002,2,AfterPlayerEndTurn,,CARD_010,CARD_010,level_002_wave_002_two_cavalry
 LEVEL_002,WAVE_003,3,AfterPlayerEndTurn,CARD_009,CARD_009|CARD_006,CARD_009,level_002_wave_003_knife_line_caocao

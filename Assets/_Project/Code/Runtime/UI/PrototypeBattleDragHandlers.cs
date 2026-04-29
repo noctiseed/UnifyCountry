@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace UnifyCountry.UI
 {
-    internal sealed class CardDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    public sealed class CardDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         private PrototypeBattleUi owner;
         private CardRecord card;
@@ -78,7 +78,7 @@ namespace UnifyCountry.UI
         }
     }
 
-    internal sealed class BoardInsertDropZone : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
+    public sealed class BoardInsertDropZone : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
     {
         private PrototypeBattleUi owner;
         private int insertIndex;

@@ -30,6 +30,7 @@ namespace UnifyCountry.UI
 
         public int RuntimeId { get; }
         public string Name => card.CardName;
+        public string UnitId => card.UnitId;
         public int Attack => card.Attack;
         public int MaxHp => card.Hp;
         public CardCamp Camp => card.Camp;

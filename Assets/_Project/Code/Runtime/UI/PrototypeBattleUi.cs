@@ -1025,8 +1025,8 @@ namespace UnifyCountry.UI
             outline.effectColor = new Color(0.28f, 0.18f, 0.08f);
             outline.effectDistance = new Vector2(2f, -2f);
 
-            var label = CreateText(root.transform, "大本营", 18, TextAnchor.MiddleCenter, new Color(0.16f, 0.1f, 0.04f));
-            SetRect(label.rectTransform, new Vector2(0f, 0.48f), Vector2.one, Vector2.zero, Vector2.zero);
+            var label = CreateText(root.transform, $"大本营  {playerBaseHp}/{PlayerBaseMaxHp}", 18, TextAnchor.MiddleCenter, new Color(0.16f, 0.1f, 0.04f));
+            SetRect(label.rectTransform, new Vector2(0f, 0.5f), Vector2.one, Vector2.zero, Vector2.zero);
 
             CreateHealthBar(root.transform, playerBaseHp, PlayerBaseMaxHp);
         }
@@ -1157,7 +1157,7 @@ namespace UnifyCountry.UI
             var row = GetSlotRow(slotIndex);
             var column = GetSlotColumn(slotIndex);
             var rowOffset = row - 1;
-            return new Vector2(0.16f + column * 0.165f + rowOffset * 0.055f, 0.69f - row * 0.23f);
+            return new Vector2(0.16f + column * 0.165f + rowOffset * 0.055f, 0.60f - row * 0.20f);
         }
 
         private static Vector2 GetSlotAnchorMin(int slotIndex)
@@ -1261,6 +1261,18 @@ namespace UnifyCountry.UI
 #endif
         }
 
+        private bool TryGetUnitSprite(BattleUnit unit, out Sprite sprite)
+        {
+#if UNITY_EDITOR
+            sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
+                $"Assets/_Project/Art/Units/Sprites/{unit.UnitId}.png");
+            return sprite != null;
+#else
+            sprite = null;
+            return false;
+#endif
+        }
+
         private Button CreateCard(Transform parent, CardRecord card)
         {
             var color = card.UnitType == UnitType.Hero ? heroCardColor : soldierCardColor;
@@ -1313,17 +1325,33 @@ namespace UnifyCountry.UI
 
         private RectTransform CreateUnitToken(Transform parent, BattleUnit unit, bool compact)
         {
-            var root = CreateImage(parent, unit.Name, unit.Camp == CardCamp.Enemy ? enemyCardColor : heroCardColor);
-            root.gameObject.AddComponent<Outline>().effectColor = new Color(0.22f, 0.16f, 0.1f);
+            var hasSprite = TryGetUnitSprite(unit, out var unitSprite);
+            var root = CreateImage(parent, unit.Name, hasSprite ? new Color(1f, 1f, 1f, 0f) : unit.Camp == CardCamp.Enemy ? enemyCardColor : heroCardColor);
+            if (!hasSprite)
+                root.gameObject.AddComponent<Outline>().effectColor = new Color(0.22f, 0.16f, 0.1f);
+
             var shadow = root.gameObject.AddComponent<Shadow>();
             shadow.effectColor = new Color(0.08f, 0.05f, 0.03f, 0.45f);
             shadow.effectDistance = new Vector2(6f, -8f);
 
-            var name = CreateText(root.transform, unit.Name, compact ? 17 : 18, TextAnchor.MiddleCenter, new Color(0.12f, 0.08f, 0.05f));
-            SetRect(name.rectTransform, new Vector2(0f, 0.56f), Vector2.one, Vector2.zero, Vector2.zero);
+            if (hasSprite)
+            {
+                var spriteImage = CreateImage(root.transform, "Unit Sprite", Color.white);
+                spriteImage.sprite = unitSprite;
+                spriteImage.preserveAspect = true;
+                SetRect(spriteImage.rectTransform, new Vector2(-0.12f, 0.08f), new Vector2(1.12f, 1.14f), Vector2.zero, Vector2.zero);
+                spriteImage.raycastTarget = false;
+            }
 
-            var attack = CreateText(root.transform, $"攻 {unit.Attack}", compact ? 15 : 16, TextAnchor.MiddleCenter, new Color(0.18f, 0.1f, 0.06f));
-            SetRect(attack.rectTransform, new Vector2(0f, 0.32f), new Vector2(1f, 0.52f), Vector2.zero, Vector2.zero);
+            var name = CreateText(root.transform, unit.Name, compact ? 15 : 16, TextAnchor.MiddleCenter, hasSprite ? Color.white : new Color(0.12f, 0.08f, 0.05f));
+            SetRect(name.rectTransform, hasSprite ? new Vector2(-0.08f, -0.08f) : new Vector2(0f, 0.56f), hasSprite ? new Vector2(1.08f, 0.12f) : Vector2.one, Vector2.zero, Vector2.zero);
+            if (hasSprite)
+                name.gameObject.AddComponent<Outline>().effectColor = new Color(0.12f, 0.06f, 0.04f, 0.9f);
+
+            var attack = CreateText(root.transform, $"攻 {unit.Attack}", compact ? 14 : 15, TextAnchor.MiddleCenter, hasSprite ? Color.white : new Color(0.18f, 0.1f, 0.06f));
+            SetRect(attack.rectTransform, hasSprite ? new Vector2(-0.08f, 0.1f) : new Vector2(0f, 0.32f), hasSprite ? new Vector2(1.08f, 0.28f) : new Vector2(1f, 0.52f), Vector2.zero, Vector2.zero);
+            if (hasSprite)
+                attack.gameObject.AddComponent<Outline>().effectColor = new Color(0.12f, 0.06f, 0.04f, 0.9f);
 
             CreateHealthBar(root.transform, unit.CurrentHp, unit.MaxHp);
 
