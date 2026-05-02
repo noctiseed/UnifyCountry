@@ -41,6 +41,7 @@ namespace UnifyCountry.UI
         private const int MaxFormationSlots = 5;
         private const int FormationRows = 3;
         private const int TotalFormationSlots = MaxFormationSlots * FormationRows;
+        private const int InitialPrepareEnergy = 5;
         private const int MaxEnergy = 3;
         private const int InitialHandSize = 5;
         private const int CardsDrawnPerTurn = 3;
@@ -64,7 +65,7 @@ namespace UnifyCountry.UI
         private int currentLevelIndex;
         private int nextWaveIndex;
         private int nextUnitRuntimeId = 1;
-        private int currentEnergy = MaxEnergy;
+        private int currentEnergy = InitialPrepareEnergy;
         private int playerBaseHp = PlayerBaseMaxHp;
         private string battleLog = InitialBattleLog;
         private bool initialized;
@@ -143,10 +144,10 @@ namespace UnifyCountry.UI
 
             turnNumber = 1;
             nextWaveIndex = 0;
-            currentEnergy = MaxEnergy;
+            currentEnergy = InitialPrepareEnergy;
             Shuffle(drawPile);
             DrawInitialHand();
-            AddBattleLogEntry($"准备阶段：英雄卡优先进入初始手牌，补足 {InitialHandSize} 张。");
+            AddBattleLogEntry($"准备阶段：获得 {InitialPrepareEnergy} 点费用，英雄卡优先进入初始手牌，补足 {InitialHandSize} 张。");
             initialized = true;
         }
 
@@ -261,8 +262,12 @@ namespace UnifyCountry.UI
                 return;
 
             currentEnergy -= card.Cost;
-            playerUnits[insertIndex] = new BattleUnit(card, nextUnitRuntimeId++);
-            AddBattleLogEntry($"{card.CardName} 上阵，消耗 {card.Cost} 点费用。");
+            var unit = new BattleUnit(card, nextUnitRuntimeId++);
+            playerUnits[insertIndex] = unit;
+
+            var logLines = new List<string> { $"{card.CardName} 上阵，消耗 {card.Cost} 点费用。" };
+            TriggerEffects(unit, "OnPlay", GetSlotRow(insertIndex), null, logLines);
+            CommitTurnLog(logLines);
             BuildUi();
         }
 
@@ -301,7 +306,10 @@ namespace UnifyCountry.UI
             }
 
             currentEnergy -= card.Cost;
-            AddBattleLogEntry($"{card.CardName} 插入阵地，消耗 {card.Cost} 点费用。");
+            var slotIndex = GetUnitSlotIndex(playerUnits, unit);
+            var logLines = new List<string> { $"{card.CardName} 插入阵地，消耗 {card.Cost} 点费用。" };
+            TriggerEffects(unit, "OnPlay", slotIndex >= 0 ? GetSlotRow(slotIndex) : DecodeGapRow(gapIndex), null, logLines);
+            CommitTurnLog(logLines);
             BuildUi();
         }
 
@@ -625,6 +633,7 @@ namespace UnifyCountry.UI
             nextWaveIndex++;
 
             var spawnedNames = new List<string>();
+            var spawnedUnits = new List<BattleUnit>();
             for (var row = 0; row < Mathf.Min(FormationRows, wave.RowCardIds.Length); row++)
             {
                 foreach (var cardId in wave.RowCardIds[row])
@@ -636,13 +645,22 @@ namespace UnifyCountry.UI
                     if (!cardMap.TryGetValue(cardId, out var card))
                         continue;
 
-                    enemyUnits[spawnSlot] = new BattleUnit(card, nextUnitRuntimeId++);
+                    var unit = new BattleUnit(card, nextUnitRuntimeId++);
+                    enemyUnits[spawnSlot] = unit;
+                    spawnedUnits.Add(unit);
                     spawnedNames.Add($"{card.CardName}(第 {row + 1} 排)");
                 }
             }
 
             if (spawnedNames.Count > 0)
                 logLines.Add($"第 {currentLevelIndex + 1} 关第 {nextWaveIndex} 波出现：{string.Join("、", spawnedNames)}。");
+
+            foreach (var unit in spawnedUnits)
+            {
+                var slotIndex = GetUnitSlotIndex(enemyUnits, unit);
+                if (slotIndex >= 0)
+                    TriggerEffects(unit, "OnPlay", GetSlotRow(slotIndex), null, logLines);
+            }
         }
 
         private void ResolveEnemyAttack(List<string> logLines)
@@ -666,8 +684,7 @@ namespace UnifyCountry.UI
                         continue;
                     }
 
-                    target.TakeDamage(attacker.Attack);
-                    logLines.Add($"{attacker.Name} 攻击第 {row + 1} 排 {target.Name}，造成 {attacker.Attack} 点伤害。");
+                    ResolveUnitAttack(attacker, row, target, logLines, "攻击");
                 }
             }
         }
@@ -686,10 +703,191 @@ namespace UnifyCountry.UI
                     if (target == null)
                         continue;
 
-                    target.TakeDamage(attacker.Attack);
-                    logLines.Add($"{attacker.Name} 反击第 {row + 1} 排 {target.Name}，造成 {attacker.Attack} 点伤害。");
+                    ResolveUnitAttack(attacker, row, target, logLines, "反击");
                 }
             }
+        }
+
+        private void ResolveUnitAttack(BattleUnit attacker, int row, BattleUnit target, List<string> logLines, string verb)
+        {
+            if (attacker == null || attacker.IsDead)
+                return;
+
+            if (TryResolveReplaceAttack(attacker, row, logLines))
+                return;
+
+            DealDamage(attacker, target, attacker.Attack, row, logLines, $"{attacker.Name} {verb}第 {row + 1} 排 {target.Name}", true);
+            TriggerEffects(attacker, "OnAttack", row, target, logLines);
+        }
+
+        private bool TryResolveReplaceAttack(BattleUnit attacker, int row, List<string> logLines)
+        {
+            foreach (var effect in attacker.Effects)
+            {
+                if (effect.Timing != "OnAttack" || effect.EffectType != "ReplaceAttack")
+                    continue;
+
+                var targets = ResolveTargets(attacker, effect.TargetRule, row, null);
+                if (targets.Count == 0)
+                    return true;
+
+                logLines.Add($"{attacker.Name} 触发「{effect.EffectName}」。");
+                foreach (var target in targets)
+                    DealDamage(attacker, target, effect.Value, row, logLines, $"{effect.EffectName} 命中第 {row + 1} 排 {target.Name}", true);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private void TriggerEffects(BattleUnit source, string timing, int row, BattleUnit currentTarget, List<string> logLines)
+        {
+            if (source == null || source.IsDead)
+                return;
+
+            foreach (var effect in source.Effects)
+            {
+                if (effect.Timing != timing)
+                    continue;
+
+                ResolveEffect(source, effect, row, currentTarget, logLines);
+            }
+        }
+
+        private void ResolveEffect(BattleUnit source, EffectRecord effect, int row, BattleUnit currentTarget, List<string> logLines)
+        {
+            switch (effect.EffectType)
+            {
+                case "Heal":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        target.Heal(effect.Value);
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，治疗 {target.Name} {effect.Value} 点。");
+                    }
+                    break;
+                case "BuffAttack":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        target.AddAttack(effect.Value);
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 攻击 +{effect.Value}。");
+                    }
+                    break;
+                case "GainShield":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        target.AddShield(effect.Value);
+                        if (effect.SecondaryValue > 0)
+                            target.AddAttackImmunity(effect.SecondaryValue);
+
+                        var immunityText = effect.SecondaryValue > 0 ? $"，并免疫 {effect.SecondaryValue} 次敌方攻击" : string.Empty;
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 点护盾{immunityText}。");
+                    }
+                    break;
+                case "BonusDamage":
+                case "Damage":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                        DealDamage(source, target, effect.Value, row, logLines, $"{source.Name} 触发「{effect.EffectName}」命中 {target.Name}", false);
+                    break;
+            }
+        }
+
+        private int ApplyBeforeDamagedEffects(BattleUnit target, BattleUnit source, int damage, int row, List<string> logLines)
+        {
+            var resolvedDamage = damage;
+            foreach (var effect in target.Effects)
+            {
+                if (effect.Timing != "BeforeDamaged" || effect.EffectType != "DamageCap")
+                    continue;
+
+                if (resolvedDamage > effect.Value)
+                {
+                    resolvedDamage = effect.Value;
+                    logLines.Add($"{target.Name} 触发「{effect.EffectName}」，本次伤害最多受到 {effect.Value} 点。");
+                }
+            }
+
+            return Mathf.Max(0, resolvedDamage);
+        }
+
+        private void DealDamage(BattleUnit source, BattleUnit target, int amount, int row, List<string> logLines, string actionText, bool triggerDamaged)
+        {
+            if (target == null || target.IsDead || amount <= 0)
+                return;
+
+            if (source != null && source.Camp != target.Camp && target.TryConsumeAttackImmunity())
+            {
+                logLines.Add($"{target.Name} 免疫了 {source.Name} 的一次攻击。");
+                return;
+            }
+
+            var resolvedDamage = ApplyBeforeDamagedEffects(target, source, amount, row, logLines);
+            var shieldBefore = target.Shield;
+            var hpBefore = target.CurrentHp;
+            target.TakeDamage(resolvedDamage);
+            var shieldDamage = shieldBefore - target.Shield;
+            var hpDamage = hpBefore - target.CurrentHp;
+            var shieldText = shieldDamage > 0 ? $"，护盾抵消 {shieldDamage} 点" : string.Empty;
+            logLines.Add($"{actionText}，造成 {hpDamage} 点伤害{shieldText}。");
+
+            if (triggerDamaged && hpDamage + shieldDamage > 0 && !target.IsDead)
+                TriggerEffects(target, "OnDamaged", row, source, logLines);
+        }
+
+        private List<BattleUnit> ResolveTargets(BattleUnit source, string targetRule, int row, BattleUnit currentTarget)
+        {
+            var targets = new List<BattleUnit>();
+            switch (targetRule)
+            {
+                case "Self":
+                    AddTarget(targets, source);
+                    break;
+                case "CurrentTarget":
+                case "Attacker":
+                    AddTarget(targets, currentTarget);
+                    break;
+                case "AllyFrontSameRow":
+                    AddTarget(targets, source.Camp == CardCamp.Player ? GetPlayerFrontUnit(row) : GetEnemyFrontUnit(row));
+                    break;
+                case "AllyAllSameRow":
+                    AddRowTargets(targets, source.Camp == CardCamp.Player ? playerUnits : enemyUnits, row);
+                    break;
+                case "EnemyAllSameRow":
+                    AddRowTargets(targets, source.Camp == CardCamp.Player ? enemyUnits : playerUnits, row);
+                    break;
+                default:
+                    AddTarget(targets, currentTarget);
+                    break;
+            }
+
+            return targets;
+        }
+
+        private static void AddTarget(List<BattleUnit> targets, BattleUnit target)
+        {
+            if (target != null && !target.IsDead && !targets.Contains(target))
+                targets.Add(target);
+        }
+
+        private static void AddRowTargets(List<BattleUnit> targets, List<BattleUnit> units, int row, BattleUnit excluded = null)
+        {
+            for (var column = 0; column < MaxFormationSlots; column++)
+            {
+                var unit = units[GetSlotIndex(row, column)];
+                if (unit != null && unit != excluded && !unit.IsDead)
+                    AddTarget(targets, unit);
+            }
+        }
+
+        private static int GetUnitSlotIndex(List<BattleUnit> units, BattleUnit target)
+        {
+            for (var i = 0; i < units.Count; i++)
+            {
+                if (units[i] == target)
+                    return i;
+            }
+
+            return -1;
         }
 
         private BattleUnit GetPlayerFrontUnit(int row)
@@ -872,7 +1070,8 @@ namespace UnifyCountry.UI
             var drawPilePanel = CreateInfoBlock(canvas.transform, "抽牌堆", drawPile.Count.ToString(), new Color(0.72f, 0.84f, 0.95f));
             SetRect(drawPilePanel, new Vector2(0.02f, 0.03f), new Vector2(0.1f, 0.28f), Vector2.zero, Vector2.zero);
 
-            var energyPanel = CreateInfoBlock(canvas.transform, "费用", $"{currentEnergy}/{MaxEnergy}", new Color(0.98f, 0.8f, 0.38f));
+            var maxEnergyThisTurn = turnNumber == 1 ? InitialPrepareEnergy : MaxEnergy;
+            var energyPanel = CreateInfoBlock(canvas.transform, "费用", $"{currentEnergy}/{maxEnergyThisTurn}", new Color(0.98f, 0.8f, 0.38f));
             SetRect(energyPanel, new Vector2(0.115f, 0.03f), new Vector2(0.19f, 0.28f), Vector2.zero, Vector2.zero);
 
             var handPanel = CreatePanel(canvas.transform, "手牌", handPanelColor);
@@ -1328,10 +1527,6 @@ namespace UnifyCountry.UI
                 SetRect(effect.rectTransform, new Vector2(0.08f, 0.25f), new Vector2(0.92f, 0.36f), Vector2.zero, Vector2.zero);
             }
 
-            var typeText = card.CardType == CardType.Unit && card.UnitType == UnitType.Hero ? "唯一" : "普通";
-            var type = CreateText(image.transform, typeText, 16, TextAnchor.MiddleCenter, Color.white);
-            SetRect(type.rectTransform, new Vector2(0.68f, 0.02f), new Vector2(0.96f, 0.16f), Vector2.zero, Vector2.zero);
-
             CreateBorder(image.transform, new Color(0.22f, 0.16f, 0.1f), 3f);
             return button;
         }
@@ -1356,25 +1551,64 @@ namespace UnifyCountry.UI
                 spriteImage.raycastTarget = false;
             }
 
-            var name = CreateText(root.transform, unit.Name, compact ? 15 : 16, TextAnchor.MiddleCenter, hasSprite ? Color.white : new Color(0.12f, 0.08f, 0.05f));
-            SetRect(name.rectTransform, hasSprite ? new Vector2(-0.08f, -0.08f) : new Vector2(0f, 0.56f), hasSprite ? new Vector2(1.08f, 0.12f) : Vector2.one, Vector2.zero, Vector2.zero);
+            var textColor = hasSprite ? Color.white : new Color(0.12f, 0.08f, 0.05f);
+            var name = CreateText(root.transform, unit.Name, compact ? 15 : 16, TextAnchor.MiddleCenter, textColor);
+            SetRect(name.rectTransform, hasSprite ? new Vector2(-0.08f, -0.04f) : new Vector2(0f, 0.02f), hasSprite ? new Vector2(1.08f, 0.12f) : new Vector2(1f, 0.16f), Vector2.zero, Vector2.zero);
             if (hasSprite)
                 name.gameObject.AddComponent<Outline>().effectColor = new Color(0.12f, 0.06f, 0.04f, 0.9f);
 
-            var attack = CreateText(root.transform, $"攻 {unit.Attack}", compact ? 14 : 15, TextAnchor.MiddleCenter, hasSprite ? Color.white : new Color(0.18f, 0.1f, 0.06f));
-            SetRect(attack.rectTransform, hasSprite ? new Vector2(-0.08f, 0.1f) : new Vector2(0f, 0.32f), hasSprite ? new Vector2(1.08f, 0.28f) : new Vector2(1f, 0.52f), Vector2.zero, Vector2.zero);
+            var attack = CreateText(root.transform, $"攻 {unit.Attack}", compact ? 13 : 14, TextAnchor.MiddleCenter, hasSprite ? Color.white : new Color(0.18f, 0.1f, 0.06f));
+            SetRect(attack.rectTransform, hasSprite ? new Vector2(-0.08f, 0.56f) : new Vector2(0f, 0.56f), hasSprite ? new Vector2(1.08f, 0.7f) : new Vector2(1f, 0.7f), Vector2.zero, Vector2.zero);
             if (hasSprite)
                 attack.gameObject.AddComponent<Outline>().effectColor = new Color(0.12f, 0.06f, 0.04f, 0.9f);
 
-            CreateHealthBar(root.transform, unit.CurrentHp, unit.MaxHp);
+            var statusText = GetUnitStatusText(unit);
+            if (!string.IsNullOrEmpty(statusText))
+            {
+                var status = CreateText(root.transform, statusText, compact ? 12 : 13, TextAnchor.MiddleCenter, hasSprite ? Color.white : new Color(0.08f, 0.2f, 0.34f));
+                SetRect(status.rectTransform, hasSprite ? new Vector2(-0.08f, 0.12f) : new Vector2(0f, 0.16f), hasSprite ? new Vector2(1.08f, 0.26f) : new Vector2(1f, 0.3f), Vector2.zero, Vector2.zero);
+                if (hasSprite)
+                    status.gameObject.AddComponent<Outline>().effectColor = new Color(0.04f, 0.1f, 0.18f, 0.9f);
+            }
+
+            CreateHealthBar(root.transform, unit.CurrentHp, unit.MaxHp, new Vector2(0.08f, 0.31f), new Vector2(0.92f, 0.5f));
 
             return root.rectTransform;
         }
 
+        private static string GetUnitStatusText(BattleUnit unit)
+        {
+            var statuses = new List<string>();
+            var attackDelta = unit.Attack - unit.BaseAttack;
+            if (attackDelta > 0)
+                statuses.Add($"攻+{attackDelta}");
+            else if (attackDelta < 0)
+                statuses.Add($"攻{attackDelta}");
+
+            if (unit.Shield > 0)
+                statuses.Add($"盾{unit.Shield}");
+
+            if (unit.AttackImmunityCharges > 0)
+                statuses.Add($"免{unit.AttackImmunityCharges}");
+
+            foreach (var effect in unit.Effects)
+            {
+                if (effect.Timing == "BeforeDamaged" && effect.EffectType == "DamageCap")
+                    statuses.Add($"限{effect.Value}");
+            }
+
+            return string.Join("  ", statuses);
+        }
+
         private void CreateHealthBar(Transform parent, int currentHp, int maxHp)
         {
+            CreateHealthBar(parent, currentHp, maxHp, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.27f));
+        }
+
+        private void CreateHealthBar(Transform parent, int currentHp, int maxHp, Vector2 anchorMin, Vector2 anchorMax)
+        {
             var frame = CreateImage(parent, "Health Bar", new Color(0.22f, 0.04f, 0.035f));
-            SetRect(frame.rectTransform, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.27f), Vector2.zero, Vector2.zero);
+            SetRect(frame.rectTransform, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
             frame.gameObject.AddComponent<Outline>().effectColor = new Color(0.08f, 0.02f, 0.015f);
 
             var fill = CreateImage(frame.transform, "Health Fill", new Color(0.83f, 0.08f, 0.06f));

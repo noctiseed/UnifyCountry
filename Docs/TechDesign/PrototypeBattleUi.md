@@ -29,6 +29,7 @@ UnifyCountry / Prototype / Create Battle UI Preview
 - 底部手牌、抽牌堆、弃牌堆与费用
 - 结束回合按钮
 - 根据卡牌数据生成的卡通风卡牌块
+- 英雄卡会显示从 `effects_v001.csv` 读取到的技能名
 
 ## Playable Prototype
 
@@ -38,7 +39,8 @@ UnifyCountry / Prototype / Create Battle UI Preview
 - 初始回合手牌为 5 张，若英雄卡超过 5 张，则随机选择 5 张英雄卡进入手牌。
 - 初始回合结束时，手牌中未使用的牌进入弃牌堆，抽牌堆中剩余的英雄卡也进入弃牌堆。
 - 后续回合每回合抽 3 张牌，不再触发英雄卡保底。
-- 玩家英雄费用均为 1。
+- 初始准备回合拥有 5 点费用，后续回合统一恢复到 3 点费用。
+- 玩家英雄费用从 `cards_v001.csv` 读取，当前刘备为 1，关羽、张飞、赵云、马超为 2。
 - 波次配置支持按关卡分组，并能指定敌人出生在哪一排。
 - 当前包含 2 个关卡；第 1 关沿用原有三波，第 2 关包含多排出兵与曹操后排跟随。
 - 点击手牌可以将单位上阵。
@@ -56,6 +58,55 @@ UnifyCountry / Prototype / Create Battle UI Preview
 - 回合结束后抽 3 张牌。
 - 关卡胜利后可以进入下一关。
 - 点击重开可以重置当前关卡。
+- 英雄技能已接入第一版触发机制：支持上阵、攻击、受伤前和受伤后触发。
+- 当前效果类型支持治疗、攻击加成、护盾、伤害、额外伤害、替代攻击和单次伤害上限。
+- 单位 token 会在名称下方、血条上方显示状态短文本，例如 `攻+1`、`盾2`、`免1`、`限4`。
+
+## Data Files
+
+当前原型使用 CSV 驱动卡牌、单位和技能：
+
+```text
+cards_v001.csv
+  card_id, card_name, card_type, cost, camp, faction, rarity,
+  max_copies_in_deck, art_id, effect_id, description_key
+
+units_v001.csv
+  card_id, unit_id, unit_name, unit_type, hp, attack, role, tags,
+  skill_effect_ids
+
+effects_v001.csv
+  effect_id, effect_name, timing, effect_type, target_rule, value,
+  secondary_value, tags, description
+```
+
+`CardRecord` 会读取卡牌通用信息，并通过 `card_id` 合并 `UnitRecord` 和 `EffectRecord`。
+
+当前支持的触发时机：
+
+- `OnPlay`：单位上阵或敌方波次生成时触发。
+- `OnAttack`：单位攻击时触发。
+- `BeforeDamaged`：单位受伤前触发，用于伤害修正。
+- `OnDamaged`：单位受伤后触发。
+
+当前支持的效果类型：
+
+- `Heal`
+- `BuffAttack`
+- `GainShield`
+- `Damage`
+- `BonusDamage`
+- `ReplaceAttack`
+- `DamageCap`
+
+当前支持的目标规则：
+
+- `Self`
+- `CurrentTarget`
+- `Attacker`
+- `AllyFrontSameRow`
+- `AllyAllSameRow`
+- `EnemyAllSameRow`
 
 ## Next Step
 
@@ -63,4 +114,5 @@ UnifyCountry / Prototype / Create Battle UI Preview
 
 - 攻击动画
 - 战斗胜负弹窗
+- 更完整的 BuffInstance 数据结构与持续回合机制
 - ScriptableObject 数据资产
