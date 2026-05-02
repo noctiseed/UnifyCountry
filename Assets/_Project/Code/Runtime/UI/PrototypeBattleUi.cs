@@ -18,6 +18,7 @@ namespace UnifyCountry.UI
 
         [Header("Config")]
         [SerializeField] private TextAsset cardsCsv;
+        [SerializeField] private TextAsset unitsCsv;
         [SerializeField] private TextAsset startingDeckCsv;
         [SerializeField] private TextAsset wavesCsv;
 
@@ -107,7 +108,7 @@ namespace UnifyCountry.UI
             if (uiFont == null)
                 uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            var cards = PrototypeCsvDatabase.LoadCards(cardsCsv);
+            var cards = PrototypeCsvDatabase.LoadCards(cardsCsv, unitsCsv);
             cardMap = cards.ToDictionary(card => card.CardId);
             RebuildCardPortraitMap();
             levels = PrototypeCsvDatabase.LoadBattleLevels(wavesCsv);
@@ -151,7 +152,7 @@ namespace UnifyCountry.UI
         private void DrawInitialHand()
         {
             var heroCards = drawPile
-                .Where(card => card.UnitType == UnitType.Hero && card.Camp == CardCamp.Player)
+                .Where(card => card.CardType == CardType.Unit && card.UnitType == UnitType.Hero && card.Camp == CardCamp.Player)
                 .ToList();
 
             Shuffle(heroCards);
@@ -218,12 +219,16 @@ namespace UnifyCountry.UI
 
         internal bool CanDragCard(CardRecord card)
         {
-            return card != null && !isResolvingTurn && currentEnergy >= card.Cost;
+            return card != null
+                && card.CardType == CardType.Unit
+                && card.Unit != null
+                && !isResolvingTurn
+                && currentEnergy >= card.Cost;
         }
 
         internal void PlayCardAt(CardRecord card, int insertIndex)
         {
-            if (card == null || card.Camp != CardCamp.Player)
+            if (card == null || card.Camp != CardCamp.Player || card.CardType != CardType.Unit || card.Unit == null)
                 return;
 
             if (isResolvingTurn)
@@ -262,7 +267,7 @@ namespace UnifyCountry.UI
 
         internal void PlayCardInGap(CardRecord card, int gapIndex)
         {
-            if (card == null || card.Camp != CardCamp.Player)
+            if (card == null || card.Camp != CardCamp.Player || card.CardType != CardType.Unit || card.Unit == null)
                 return;
 
             if (isResolvingTurn)
@@ -594,7 +599,7 @@ namespace UnifyCountry.UI
                 return;
 
             var heroes = drawPile
-                .Where(card => card.UnitType == UnitType.Hero && card.Camp == CardCamp.Player)
+                .Where(card => card.CardType == CardType.Unit && card.UnitType == UnitType.Hero && card.Camp == CardCamp.Player)
                 .ToList();
 
             if (heroes.Count == 0)
@@ -1253,7 +1258,7 @@ namespace UnifyCountry.UI
 
 #if UNITY_EDITOR
             portrait = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
-                $"Assets/_Project/Art/Cards/Portraits/{card.CardId}.png");
+                $"Assets/_Project/Art/Cards/Portraits/{(string.IsNullOrWhiteSpace(card.ArtId) ? card.CardId : card.ArtId)}.png");
             return portrait != null;
 #else
             portrait = null;
@@ -1275,7 +1280,7 @@ namespace UnifyCountry.UI
 
         private Button CreateCard(Transform parent, CardRecord card)
         {
-            var color = card.UnitType == UnitType.Hero ? heroCardColor : soldierCardColor;
+            var color = card.CardType == CardType.Unit && card.UnitType == UnitType.Hero ? heroCardColor : soldierCardColor;
             var image = CreateImage(parent, card.CardName, color);
 
             var button = image.gameObject.AddComponent<Button>();
@@ -1312,10 +1317,11 @@ namespace UnifyCountry.UI
                 SetRect(face.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             }
 
-            var stats = CreateText(image.transform, $"攻 {card.Attack}   血 {card.Hp}", 20, TextAnchor.MiddleCenter, new Color(0.2f, 0.12f, 0.08f));
+            var statsText = card.CardType == CardType.Unit ? $"攻 {card.Attack}   血 {card.Hp}" : card.CardType.ToString();
+            var stats = CreateText(image.transform, statsText, 20, TextAnchor.MiddleCenter, new Color(0.2f, 0.12f, 0.08f));
             SetRect(stats.rectTransform, new Vector2(0.05f, 0.12f), new Vector2(0.95f, 0.31f), Vector2.zero, Vector2.zero);
 
-            var typeText = card.UnitType == UnitType.Hero ? "唯一" : "普通";
+            var typeText = card.CardType == CardType.Unit && card.UnitType == UnitType.Hero ? "唯一" : "普通";
             var type = CreateText(image.transform, typeText, 16, TextAnchor.MiddleCenter, Color.white);
             SetRect(type.rectTransform, new Vector2(0.68f, 0.02f), new Vector2(0.96f, 0.16f), Vector2.zero, Vector2.zero);
 

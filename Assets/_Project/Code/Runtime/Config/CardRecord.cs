@@ -14,20 +14,47 @@ namespace UnifyCountry.Config
         Soldier
     }
 
+    public enum CardType
+    {
+        Unit,
+        Skill,
+        Equipment,
+        Power,
+        Event
+    }
+
     public sealed class CardRecord
     {
         public string CardId;
         public string CardName;
+        public CardType CardType;
+        public int Cost;
+        public CardCamp Camp;
+        public string Faction;
+        public string Rarity;
+        public int MaxCopiesInDeck;
+        public string ArtId;
+        public string EffectId;
+        public string DescriptionKey;
+        public UnitRecord Unit;
+
+        public string UnitId => Unit == null ? string.Empty : Unit.UnitId;
+        public string UnitName => Unit == null ? CardName : Unit.UnitName;
+        public UnitType UnitType => Unit == null ? UnifyCountry.Config.UnitType.Soldier : Unit.UnitType;
+        public int Hp => Unit == null ? 0 : Unit.Hp;
+        public int Attack => Unit == null ? 0 : Unit.Attack;
+    }
+
+    public sealed class UnitRecord
+    {
+        public string CardId;
         public string UnitId;
         public string UnitName;
         public UnitType UnitType;
         public int Hp;
         public int Attack;
-        public int Cost;
-        public CardCamp Camp;
-        public string Faction;
-        public int MaxCopiesInDeck;
-        public string DescriptionKey;
+        public string Role;
+        public string Tags;
     }
 
     public sealed class WaveSpawnRecord

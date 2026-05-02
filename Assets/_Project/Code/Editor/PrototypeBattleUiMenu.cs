@@ -19,6 +19,8 @@ namespace UnifyCountry.Editor
             var serialized = new SerializedObject(preview);
             serialized.FindProperty("cardsCsv").objectReferenceValue =
                 AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/_Project/Configs/Cards/cards_v001.csv");
+            serialized.FindProperty("unitsCsv").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/_Project/Configs/Cards/units_v001.csv");
             serialized.FindProperty("startingDeckCsv").objectReferenceValue =
                 AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/_Project/Configs/Cards/player_starting_deck_v001.csv");
             serialized.FindProperty("wavesCsv").objectReferenceValue =

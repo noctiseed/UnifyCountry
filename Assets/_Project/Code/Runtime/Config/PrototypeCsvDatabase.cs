@@ -7,34 +7,71 @@ namespace UnifyCountry.Config
 {
     public static class PrototypeCsvDatabase
     {
-        public static List<CardRecord> LoadCards(TextAsset cardsCsv)
+        public static List<CardRecord> LoadCards(TextAsset cardsCsv, TextAsset unitsCsv)
         {
             var records = new List<CardRecord>();
             if (cardsCsv == null)
                 return records;
 
+            var unitMap = LoadUnits(unitsCsv);
             var rows = ReadRows(cardsCsv.text);
             for (var i = 1; i < rows.Count; i++)
             {
                 var row = rows[i];
-                if (row.Count < 12)
+                if (row.Count < 11)
                     continue;
 
-                records.Add(new CardRecord
+                var card = new CardRecord
                 {
                     CardId = row[0],
                     CardName = row[1],
-                    UnitId = row[2],
-                    UnitName = row[3],
-                    UnitType = ParseEnum(row[4], UnitType.Soldier),
-                    Hp = ParseInt(row[5]),
-                    Attack = ParseInt(row[6]),
-                    Cost = ParseInt(row[7]),
-                    Camp = ParseEnum(row[8], CardCamp.Player),
-                    Faction = row[9],
-                    MaxCopiesInDeck = ParseInt(row[10]),
-                    DescriptionKey = row[11]
-                });
+                    CardType = ParseEnum(row[2], CardType.Unit),
+                    Cost = ParseInt(row[3]),
+                    Camp = ParseEnum(row[4], CardCamp.Player),
+                    Faction = row[5],
+                    Rarity = row[6],
+                    MaxCopiesInDeck = ParseInt(row[7]),
+                    ArtId = row[8],
+                    EffectId = row[9],
+                    DescriptionKey = row[10]
+                };
+
+                if (unitMap.TryGetValue(card.CardId, out var unit))
+                    card.Unit = unit;
+
+                records.Add(card);
+            }
+
+            return records;
+        }
+
+        private static Dictionary<string, UnitRecord> LoadUnits(TextAsset unitsCsv)
+        {
+            var records = new Dictionary<string, UnitRecord>();
+            if (unitsCsv == null)
+                return records;
+
+            var rows = ReadRows(unitsCsv.text);
+            for (var i = 1; i < rows.Count; i++)
+            {
+                var row = rows[i];
+                if (row.Count < 8)
+                    continue;
+
+                var unit = new UnitRecord
+                {
+                    CardId = row[0],
+                    UnitId = row[1],
+                    UnitName = row[2],
+                    UnitType = ParseEnum(row[3], UnitType.Soldier),
+                    Hp = ParseInt(row[4]),
+                    Attack = ParseInt(row[5]),
+                    Role = row[6],
+                    Tags = row[7]
+                };
+
+                if (!string.IsNullOrWhiteSpace(unit.CardId))
+                    records[unit.CardId] = unit;
             }
 
             return records;

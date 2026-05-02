@@ -9621,6 +9621,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cardsCsv: {fileID: 4900000, guid: 00c9419a02a93b84da5f794ad5ad486f, type: 3}
+  unitsCsv: {fileID: 4900000, guid: 6bfa2827671744f4a907241410211c2c, type: 3}
   startingDeckCsv: {fileID: 4900000, guid: bc73782181d7c5e4ba55855fd3f29f6c, type: 3}
   wavesCsv: {fileID: 4900000, guid: 697f339bf207a3541a6eced6226144ed, type: 3}
   uiFont: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
