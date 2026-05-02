@@ -7,13 +7,14 @@ namespace UnifyCountry.Config
 {
     public static class PrototypeCsvDatabase
     {
-        public static List<CardRecord> LoadCards(TextAsset cardsCsv, TextAsset unitsCsv)
+        public static List<CardRecord> LoadCards(TextAsset cardsCsv, TextAsset unitsCsv, TextAsset effectsCsv = null)
         {
             var records = new List<CardRecord>();
             if (cardsCsv == null)
                 return records;
 
             var unitMap = LoadUnits(unitsCsv);
+            var effectMap = LoadEffects(effectsCsv);
             var rows = ReadRows(cardsCsv.text);
             for (var i = 1; i < rows.Count; i++)
             {
@@ -37,7 +38,14 @@ namespace UnifyCountry.Config
                 };
 
                 if (unitMap.TryGetValue(card.CardId, out var unit))
+                {
                     card.Unit = unit;
+                    foreach (var effectId in unit.SkillEffectIds)
+                    {
+                        if (effectMap.TryGetValue(effectId, out var effect))
+                            card.Effects.Add(effect);
+                    }
+                }
 
                 records.Add(card);
             }
@@ -70,8 +78,44 @@ namespace UnifyCountry.Config
                     Tags = row[7]
                 };
 
+                if (row.Count > 8)
+                    AddIds(unit.SkillEffectIds, row[8]);
+
                 if (!string.IsNullOrWhiteSpace(unit.CardId))
                     records[unit.CardId] = unit;
+            }
+
+            return records;
+        }
+
+        private static Dictionary<string, EffectRecord> LoadEffects(TextAsset effectsCsv)
+        {
+            var records = new Dictionary<string, EffectRecord>();
+            if (effectsCsv == null)
+                return records;
+
+            var rows = ReadRows(effectsCsv.text);
+            for (var i = 1; i < rows.Count; i++)
+            {
+                var row = rows[i];
+                if (row.Count < 9)
+                    continue;
+
+                var effect = new EffectRecord
+                {
+                    EffectId = row[0],
+                    EffectName = row[1],
+                    Timing = row[2],
+                    EffectType = row[3],
+                    TargetRule = row[4],
+                    Value = ParseInt(row[5]),
+                    SecondaryValue = ParseInt(row[6]),
+                    Tags = row[7],
+                    Description = row[8]
+                };
+
+                if (!string.IsNullOrWhiteSpace(effect.EffectId))
+                    records[effect.EffectId] = effect;
             }
 
             return records;
@@ -143,6 +187,11 @@ namespace UnifyCountry.Config
             if (string.IsNullOrWhiteSpace(value))
                 return;
 
+            AddIds(values, value);
+        }
+
+        private static void AddIds(List<string> values, string value)
+        {
             var ids = value.Split('|');
             foreach (var id in ids)
             {

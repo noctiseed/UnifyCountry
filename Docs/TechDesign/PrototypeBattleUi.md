@@ -12,6 +12,7 @@ UnifyCountry / Prototype / Create Battle UI Preview
 
 - `Assets/_Project/Configs/Cards/cards_v001.csv`
 - `Assets/_Project/Configs/Cards/units_v001.csv`
+- `Assets/_Project/Configs/Cards/effects_v001.csv`
 - `Assets/_Project/Configs/Cards/player_starting_deck_v001.csv`
 - `Assets/_Project/Configs/Waves/battle_001_waves_v001.csv`
 

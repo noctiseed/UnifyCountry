@@ -37,6 +37,7 @@ namespace UnifyCountry.Config
         public string EffectId;
         public string DescriptionKey;
         public UnitRecord Unit;
+        public readonly List<EffectRecord> Effects = new List<EffectRecord>();
 
         public string UnitId => Unit == null ? string.Empty : Unit.UnitId;
         public string UnitName => Unit == null ? CardName : Unit.UnitName;
@@ -55,6 +56,20 @@ namespace UnifyCountry.Config
         public int Attack;
         public string Role;
         public string Tags;
+        public readonly List<string> SkillEffectIds = new List<string>();
+    }
+
+    public sealed class EffectRecord
+    {
+        public string EffectId;
+        public string EffectName;
+        public string Timing;
+        public string EffectType;
+        public string TargetRule;
+        public int Value;
+        public int SecondaryValue;
+        public string Tags;
+        public string Description;
     }
 
     public sealed class WaveSpawnRecord

@@ -19,6 +19,7 @@ namespace UnifyCountry.UI
         [Header("Config")]
         [SerializeField] private TextAsset cardsCsv;
         [SerializeField] private TextAsset unitsCsv;
+        [SerializeField] private TextAsset effectsCsv;
         [SerializeField] private TextAsset startingDeckCsv;
         [SerializeField] private TextAsset wavesCsv;
 
@@ -108,7 +109,7 @@ namespace UnifyCountry.UI
             if (uiFont == null)
                 uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            var cards = PrototypeCsvDatabase.LoadCards(cardsCsv, unitsCsv);
+            var cards = PrototypeCsvDatabase.LoadCards(cardsCsv, unitsCsv, effectsCsv);
             cardMap = cards.ToDictionary(card => card.CardId);
             RebuildCardPortraitMap();
             levels = PrototypeCsvDatabase.LoadBattleLevels(wavesCsv);
@@ -1298,7 +1299,7 @@ namespace UnifyCountry.UI
             SetRect(name.rectTransform, new Vector2(0.2f, 0.72f), new Vector2(0.96f, 0.96f), Vector2.zero, Vector2.zero);
 
             var portrait = CreateImage(image.transform, "Portrait", new Color(1f, 0.96f, 0.78f));
-            SetRect(portrait.rectTransform, new Vector2(0.14f, 0.34f), new Vector2(0.86f, 0.69f), Vector2.zero, Vector2.zero);
+            SetRect(portrait.rectTransform, new Vector2(0.14f, 0.39f), new Vector2(0.86f, 0.69f), Vector2.zero, Vector2.zero);
 
             if (TryGetCardPortrait(card, out var portraitSprite))
             {
@@ -1319,7 +1320,13 @@ namespace UnifyCountry.UI
 
             var statsText = card.CardType == CardType.Unit ? $"攻 {card.Attack}   血 {card.Hp}" : card.CardType.ToString();
             var stats = CreateText(image.transform, statsText, 20, TextAnchor.MiddleCenter, new Color(0.2f, 0.12f, 0.08f));
-            SetRect(stats.rectTransform, new Vector2(0.05f, 0.12f), new Vector2(0.95f, 0.31f), Vector2.zero, Vector2.zero);
+            SetRect(stats.rectTransform, new Vector2(0.05f, 0.1f), new Vector2(0.95f, 0.25f), Vector2.zero, Vector2.zero);
+
+            if (card.Effects.Count > 0)
+            {
+                var effect = CreateText(image.transform, card.Effects[0].EffectName, 14, TextAnchor.MiddleCenter, new Color(0.22f, 0.12f, 0.08f));
+                SetRect(effect.rectTransform, new Vector2(0.08f, 0.25f), new Vector2(0.92f, 0.36f), Vector2.zero, Vector2.zero);
+            }
 
             var typeText = card.CardType == CardType.Unit && card.UnitType == UnitType.Hero ? "唯一" : "普通";
             var type = CreateText(image.transform, typeText, 16, TextAnchor.MiddleCenter, Color.white);
