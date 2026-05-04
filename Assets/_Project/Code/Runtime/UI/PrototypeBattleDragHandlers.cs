@@ -78,6 +78,52 @@ namespace UnifyCountry.UI
         }
     }
 
+    public sealed class DropdownOptionHighlightHandler : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
+    {
+        private Image highlight;
+        private Color hoverColor;
+        private Color pressedColor;
+
+        public void Initialize(Image highlight, Color hoverColor, Color pressedColor)
+        {
+            this.highlight = highlight;
+            this.hoverColor = hoverColor;
+            this.pressedColor = pressedColor;
+            Clear();
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            SetColor(hoverColor);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            Clear();
+        }
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            SetColor(pressedColor);
+        }
+
+        public void OnPointerUp(PointerEventData eventData)
+        {
+            SetColor(hoverColor);
+        }
+
+        private void Clear()
+        {
+            SetColor(Color.clear);
+        }
+
+        private void SetColor(Color color)
+        {
+            if (highlight != null)
+                highlight.color = color;
+        }
+    }
+
     public sealed class BoardInsertDropZone : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
     {
         private PrototypeBattleUi owner;
