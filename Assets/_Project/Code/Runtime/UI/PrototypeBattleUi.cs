@@ -310,7 +310,7 @@ namespace UnifyCountry.UI
             if (!TryInsertPlayerUnitAtGap(unit, gapIndex))
             {
                 hand.Add(card);
-                AddBattleLogEntry("当前同排插入位置不可用。");
+                AddBattleLogEntry("当前军阵插入位置不可用。");
                 BuildUi();
                 return;
             }
@@ -682,7 +682,7 @@ namespace UnifyCountry.UI
                     var unit = new BattleUnit(card, nextUnitRuntimeId++);
                     enemyUnits[spawnSlot] = unit;
                     spawnedUnits.Add(unit);
-                    spawnedNames.Add($"{card.CardName}(第 {row + 1} 排)");
+                    spawnedNames.Add($"{card.CardName}({GetFormationRowName(row)})");
                 }
             }
 
@@ -711,7 +711,7 @@ namespace UnifyCountry.UI
                     if (target == null)
                     {
                         playerBaseHp = Mathf.Max(0, playerBaseHp - attacker.Attack);
-                        logLines.Add($"{attacker.Name} 攻击第 {row + 1} 排大本营，造成 {attacker.Attack} 点伤害。");
+                        logLines.Add($"{attacker.Name} 从{GetFormationRowName(row)}攻击大本营，造成 {attacker.Attack} 点伤害。");
                         if (playerBaseHp <= 0)
                             return;
 
@@ -751,7 +751,7 @@ namespace UnifyCountry.UI
                 return;
 
             var attack = attacker.Attack;
-            DealDamage(attacker, target, attack, row, logLines, $"{attacker.Name} {verb}第 {row + 1} 排 {target.Name}（攻击力 {attack}）", true);
+            DealDamage(attacker, target, attack, row, logLines, $"{attacker.Name} {verb}{GetFormationRowName(row)} {target.Name}（攻击力 {attack}）", true);
             TriggerEffects(attacker, "OnAttack", row, target, logLines);
         }
 
@@ -768,7 +768,7 @@ namespace UnifyCountry.UI
 
                 logLines.Add($"{attacker.Name} 触发「{effect.EffectName}」。");
                 foreach (var target in targets)
-                    DealDamage(attacker, target, effect.Value, row, logLines, $"{effect.EffectName} 命中第 {row + 1} 排 {target.Name}", true);
+                    DealDamage(attacker, target, effect.Value, row, logLines, $"{effect.EffectName} 命中{GetFormationRowName(row)} {target.Name}", true);
 
                 return true;
             }
@@ -1076,6 +1076,31 @@ namespace UnifyCountry.UI
             }
         }
 
+        private bool RemoveDeadUnitsFromFormation(List<string> logLines)
+        {
+            var removed = false;
+            removed |= RemoveDeadUnitsFromFormation(enemyUnits, logLines);
+            removed |= RemoveDeadUnitsFromFormation(playerUnits, logLines);
+            return removed;
+        }
+
+        private static bool RemoveDeadUnitsFromFormation(List<BattleUnit> units, List<string> logLines)
+        {
+            var removed = false;
+            for (var i = 0; i < units.Count; i++)
+            {
+                var unit = units[i];
+                if (unit == null || !unit.IsDead)
+                    continue;
+
+                logLines.Add($"{unit.Name} 阵亡，移出阵地。");
+                units[i] = null;
+                removed = true;
+            }
+
+            return removed;
+        }
+
         private void BuildUi()
         {
             CancelSkillCast();
@@ -1226,9 +1251,6 @@ namespace UnifyCountry.UI
                     outline.effectColor = new Color(0.35f, 0.25f, 0.16f, 0.7f);
                     outline.effectDistance = new Vector2(2f, -2f);
 
-                    var labelText = playerSide ? (MaxFormationSlots - column).ToString() : (column + 1).ToString();
-                    var label = CreateText(slot.transform, labelText, 14, TextAnchor.LowerCenter, new Color(0.23f, 0.16f, 0.1f, 0.72f));
-                    SetRect(label.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
                 }
 
                 CreateSkillRowTargetZone(parent, row, playerSide);
@@ -1399,6 +1421,19 @@ namespace UnifyCountry.UI
             return Mathf.Clamp(slotIndex / MaxFormationSlots, 0, FormationRows - 1);
         }
 
+        private static string GetFormationRowName(int row)
+        {
+            switch (Mathf.Clamp(row, 0, FormationRows - 1))
+            {
+                case 0:
+                    return "后军";
+                case 1:
+                    return "中军";
+                default:
+                    return "前军";
+            }
+        }
+
         private static int GetSlotColumn(int slotIndex)
         {
             return Mathf.Clamp(slotIndex % MaxFormationSlots, 0, MaxFormationSlots - 1);
@@ -1477,7 +1512,7 @@ namespace UnifyCountry.UI
                 foreach (var cardId in wave.RowCardIds[row])
                 {
                     if (cardMap.TryGetValue(cardId, out var card))
-                        names.Add($"{card.CardName}(第 {row + 1} 排)");
+                        names.Add($"{card.CardName}({GetFormationRowName(row)})");
                 }
             }
 

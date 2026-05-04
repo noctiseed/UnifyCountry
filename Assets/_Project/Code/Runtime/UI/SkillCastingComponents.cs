@@ -84,10 +84,10 @@ namespace UnifyCountry.UI
             EnsureHighlight();
             highlight.enabled = true;
             highlight.color = valid
-                ? new Color(1f, 0.82f, 0.22f, target.Kind == SkillTargetKind.Row ? 0.26f : 0.34f)
+                ? new Color(0.18f, 1f, 0.38f, target.Kind == SkillTargetKind.Row ? 0.24f : 0.32f)
                 : new Color(0.95f, 0.16f, 0.12f, target.Kind == SkillTargetKind.Row ? 0.22f : 0.3f);
             highlightOutline.effectColor = valid
-                ? new Color(1f, 0.94f, 0.45f, 0.9f)
+                ? new Color(0.45f, 1f, 0.55f, 0.72f)
                 : new Color(1f, 0.18f, 0.12f, 0.9f);
         }
 

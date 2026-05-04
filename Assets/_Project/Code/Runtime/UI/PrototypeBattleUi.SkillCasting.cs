@@ -239,7 +239,7 @@ namespace UnifyCountry.UI
 
             castingArrow = arrowObject.GetComponent<DashedArrowGraphic>();
             castingArrow.raycastTarget = false;
-            castingArrow.color = new Color(1f, 0.78f, 0.22f, 0.95f);
+            castingArrow.color = new Color(0.18f, 1f, 0.38f, 0.72f);
         }
 
         private void UpdateSkillArrow()
@@ -268,7 +268,7 @@ namespace UnifyCountry.UI
                 return;
 
             castingArrow.color = valid
-                ? new Color(1f, 0.88f, 0.24f, 1f)
+                ? new Color(0.2f, 1f, 0.38f, 0.82f)
                 : new Color(1f, 0.33f, 0.22f, 0.95f);
         }
 
@@ -380,6 +380,7 @@ namespace UnifyCountry.UI
 
             var logLines = new List<string> { $"释放「{card.CardName}」，消耗 {card.Cost} 点费用。" };
             ResolveSkillCardEffects(card, target, logLines);
+            RemoveDeadUnitsFromFormation(logLines);
             CancelSkillCast();
             CommitTurnLog(logLines);
             BuildUi();
