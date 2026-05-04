@@ -31,6 +31,7 @@ namespace UnifyCountry.UI
         [SerializeField] private List<CardPortraitEntry> cardPortraits = new List<CardPortraitEntry>();
         [SerializeField] private Sprite attackIconSprite;
         [SerializeField] private Sprite shieldIconSprite;
+        [SerializeField] private Sprite regenerationIconSprite;
 
         private readonly Color backgroundColor = new Color(0.94f, 0.89f, 0.73f);
         private readonly Color playerPanelColor = new Color(0.76f, 0.92f, 0.67f);
@@ -542,6 +543,9 @@ namespace UnifyCountry.UI
             AppendDeathLogs(logLines);
 
             yield return StartCoroutine(AdvanceFormationsRoutine(logLines));
+            ResolveEndOfTurnBuffs(logLines);
+            UpdateActiveTurnLog(logLines);
+            BuildUi();
 
             var waves = CurrentWaves;
             if (CountEnemyUnits() == 0 && (waves == null || nextWaveIndex >= waves.Count))
@@ -1073,6 +1077,26 @@ namespace UnifyCountry.UI
             {
                 if (unit != null && unit.IsDead)
                     logLines.Add($"{unit.Name} 阵亡。");
+            }
+        }
+
+        private void ResolveEndOfTurnBuffs(List<string> logLines)
+        {
+            ResolveEndOfTurnBuffs(playerUnits, logLines);
+            ResolveEndOfTurnBuffs(enemyUnits, logLines);
+        }
+
+        private static void ResolveEndOfTurnBuffs(List<BattleUnit> units, List<string> logLines)
+        {
+            for (var i = 0; i < units.Count; i++)
+            {
+                var unit = units[i];
+                if (unit == null || unit.IsDead || unit.Revival <= 0)
+                    continue;
+
+                var revivalBefore = unit.Revival;
+                var healed = unit.ResolveRevival();
+                logLines.Add($"{unit.Name} 触发复苏 {revivalBefore}，恢复 {healed} 点生命，复苏降为 {unit.Revival}。");
             }
         }
 
@@ -1608,6 +1632,24 @@ namespace UnifyCountry.UI
 #endif
         }
 
+        private bool TryGetRegenerationIconSprite(out Sprite sprite)
+        {
+            if (regenerationIconSprite != null)
+            {
+                sprite = regenerationIconSprite;
+                return true;
+            }
+
+#if UNITY_EDITOR
+            sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/_Project/Art/UI/Icons/icon_regeneration.png");
+            return sprite != null;
+#else
+            sprite = null;
+            return false;
+#endif
+        }
+
         private Button CreateCard(Transform parent, CardRecord card)
         {
             var color = GetCardColor(card);
@@ -1694,7 +1736,7 @@ namespace UnifyCountry.UI
             if (!string.IsNullOrEmpty(statusText))
             {
                 var status = CreateText(root.transform, statusText, compact ? 12 : 13, TextAnchor.MiddleCenter, hasSprite ? Color.white : new Color(0.08f, 0.2f, 0.34f));
-                var defenseBuffIconCount = (unit.Shield > 0 ? 1 : 0) + (unit.AttackImmunityCharges > 0 ? 1 : 0);
+                var defenseBuffIconCount = GetVisibleBuffIconCount(unit);
                 var statusMinX = defenseBuffIconCount > 0 ? 0.32f + defenseBuffIconCount * 0.26f : hasSprite ? 0.3f : 0.32f;
                 SetRect(status.rectTransform, hasSprite ? new Vector2(statusMinX, 0.2f) : new Vector2(statusMinX, 0.22f), hasSprite ? new Vector2(1.08f, 0.34f) : new Vector2(1f, 0.36f), Vector2.zero, Vector2.zero);
                 if (hasSprite)
@@ -1770,6 +1812,31 @@ namespace UnifyCountry.UI
                     true,
                     $"免疫 {unit.AttackImmunityCharges} 次敌方攻击");
             }
+
+            if (unit.Revival > 0)
+            {
+                var hasRegenerationSprite = TryGetRegenerationIconSprite(out var regenerationSprite);
+                CreateUnitBuffIcon(
+                    parent,
+                    iconIndex,
+                    hasRegenerationSprite ? Color.clear : hasSprite ? new Color(0.08f, 0.34f, 0.16f, 0.86f) : new Color(0.1f, 0.5f, 0.22f, 0.92f),
+                    iconParent =>
+                    {
+                        if (hasRegenerationSprite)
+                            CreateBuffIconSprite(iconParent, regenerationSprite);
+                        else
+                            CreateBuffTextIcon(iconParent, "复", new Color(0.78f, 1f, 0.72f));
+                    },
+                    !hasRegenerationSprite,
+                    $"复苏 {unit.Revival}：回合最后结算时恢复等同于当前复苏层数的生命，然后复苏 -1");
+            }
+        }
+
+        private static int GetVisibleBuffIconCount(BattleUnit unit)
+        {
+            return (unit.Shield > 0 ? 1 : 0)
+                + (unit.AttackImmunityCharges > 0 ? 1 : 0)
+                + (unit.Revival > 0 ? 1 : 0);
         }
 
         private void CreateUnitBuffIcon(Transform parent, int iconIndex, Color backgroundColor, System.Action<Transform> createShape, bool useBackgroundFrame, string tooltipText)
@@ -1803,6 +1870,13 @@ namespace UnifyCountry.UI
             spriteImage.preserveAspect = true;
             spriteImage.raycastTarget = false;
             SetRect(spriteImage.rectTransform, new Vector2(0.02f, 0.02f), new Vector2(0.98f, 0.98f), Vector2.zero, Vector2.zero);
+        }
+
+        private void CreateBuffTextIcon(Transform parent, string value, Color color)
+        {
+            var text = CreateText(parent, value, 18, TextAnchor.MiddleCenter, color);
+            text.raycastTarget = false;
+            SetRect(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
         }
 
         private void CreateShieldIconShape(Transform parent)

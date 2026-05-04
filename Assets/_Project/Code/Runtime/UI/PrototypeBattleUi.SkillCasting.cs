@@ -409,6 +409,14 @@ namespace UnifyCountry.UI
                             logLines.Add($"「{card.CardName}」治疗 {unit.Name} {effect.Value} 点。");
                         }
                         break;
+                    case "HealAndGainRevival":
+                        foreach (var unit in ResolveSkillTargetUnits(target))
+                        {
+                            unit.Heal(effect.Value);
+                            unit.AddRevival(effect.SecondaryValue);
+                            logLines.Add($"「{card.CardName}」治疗 {unit.Name} {effect.Value} 点，并使其获得 {effect.SecondaryValue} 层复苏。");
+                        }
+                        break;
                     case "BuffAttack":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                         {

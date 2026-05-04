@@ -4,6 +4,25 @@ using System.Collections.Generic;
 
 namespace UnifyCountry.UI
 {
+    internal enum BattleBuffType
+    {
+        Shield,
+        AttackImmunity,
+        Revival
+    }
+
+    internal sealed class BattleBuff
+    {
+        public BattleBuff(BattleBuffType type, int stacks)
+        {
+            Type = type;
+            Stacks = Mathf.Max(0, stacks);
+        }
+
+        public BattleBuffType Type { get; }
+        public int Stacks { get; set; }
+    }
+
     internal readonly struct FormationMove
     {
         public FormationMove(int unitRuntimeId, int fromSlotIndex, int toSlotIndex, bool playerSide)
@@ -23,6 +42,7 @@ namespace UnifyCountry.UI
     internal sealed class BattleUnit
     {
         private readonly CardRecord card;
+        private readonly List<BattleBuff> buffs = new List<BattleBuff>();
         private int maxHp;
 
         public BattleUnit(CardRecord card, int runtimeId)
@@ -44,8 +64,9 @@ namespace UnifyCountry.UI
         public IReadOnlyList<EffectRecord> Effects => card.Effects;
         public int CurrentAttack { get; private set; }
         public int CurrentHp { get; private set; }
-        public int Shield { get; private set; }
-        public int AttackImmunityCharges { get; private set; }
+        public int Shield => GetBuffStacks(BattleBuffType.Shield);
+        public int AttackImmunityCharges => GetBuffStacks(BattleBuffType.AttackImmunity);
+        public int Revival => GetBuffStacks(BattleBuffType.Revival);
         public bool IsDead => CurrentHp <= 0;
 
         public void Heal(int amount)
@@ -71,30 +92,43 @@ namespace UnifyCountry.UI
 
         public void AddShield(int amount)
         {
-            Shield = Mathf.Max(0, Shield + amount);
+            AddBuff(BattleBuffType.Shield, amount);
         }
 
         public bool TryConsumeShield()
         {
-            if (Shield <= 0)
-                return false;
-
-            Shield--;
-            return true;
+            return TryConsumeBuff(BattleBuffType.Shield);
         }
 
         public void AddAttackImmunity(int charges)
         {
-            AttackImmunityCharges = Mathf.Max(0, AttackImmunityCharges + charges);
+            AddBuff(BattleBuffType.AttackImmunity, charges);
         }
 
         public bool TryConsumeAttackImmunity()
         {
-            if (AttackImmunityCharges <= 0)
-                return false;
+            return TryConsumeBuff(BattleBuffType.AttackImmunity);
+        }
 
-            AttackImmunityCharges--;
-            return true;
+        public void AddRevival(int stacks)
+        {
+            AddBuff(BattleBuffType.Revival, stacks);
+        }
+
+        public int ResolveRevival()
+        {
+            var buff = GetBuff(BattleBuffType.Revival);
+            if (buff == null || buff.Stacks <= 0 || IsDead)
+                return 0;
+
+            var healAmount = buff.Stacks;
+            var hpBefore = CurrentHp;
+            Heal(healAmount);
+            buff.Stacks = Mathf.Max(0, buff.Stacks - 1);
+            if (buff.Stacks == 0)
+                buffs.Remove(buff);
+
+            return CurrentHp - hpBefore;
         }
 
         public int TakeDamage(int amount)
@@ -106,6 +140,49 @@ namespace UnifyCountry.UI
             var hpBefore = CurrentHp;
             CurrentHp = Mathf.Max(0, CurrentHp - remaining);
             return hpBefore - CurrentHp;
+        }
+
+        private void AddBuff(BattleBuffType type, int stacks)
+        {
+            var resolvedStacks = Mathf.Max(0, stacks);
+            if (resolvedStacks <= 0)
+                return;
+
+            var buff = GetBuff(type);
+            if (buff == null)
+                buffs.Add(new BattleBuff(type, resolvedStacks));
+            else
+                buff.Stacks += resolvedStacks;
+        }
+
+        private bool TryConsumeBuff(BattleBuffType type)
+        {
+            var buff = GetBuff(type);
+            if (buff == null || buff.Stacks <= 0)
+                return false;
+
+            buff.Stacks--;
+            if (buff.Stacks == 0)
+                buffs.Remove(buff);
+
+            return true;
+        }
+
+        private int GetBuffStacks(BattleBuffType type)
+        {
+            var buff = GetBuff(type);
+            return buff == null ? 0 : buff.Stacks;
+        }
+
+        private BattleBuff GetBuff(BattleBuffType type)
+        {
+            for (var i = 0; i < buffs.Count; i++)
+            {
+                if (buffs[i].Type == type)
+                    return buffs[i];
+            }
+
+            return null;
         }
     }
 }
