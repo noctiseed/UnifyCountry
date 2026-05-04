@@ -5,5 +5,5 @@ EFFECT_ZF_001,咆哮,OnDamaged,Damage,Attacker,2,0,HeroSkill|Shu,受击时反击
 EFFECT_CC_001,魏武号令,OnPlay,BuffAttack,AllyAllSameRow,1,0,HeroSkill|Wei,上阵时同排所有敌方单位攻击+1
 EFFECT_XHD_001,刚烈,OnDamaged,BuffAttack,Self,1,0,HeroSkill|Wei,每次受击后攻击力+1
 EFFECT_CR_001,固守,BeforeDamaged,DamageCap,Self,4,0,HeroSkill|Wei,每次受到伤害时最多只受到4点伤害
-EFFECT_ZY_001,龙胆,OnPlay,GainShield,Self,2,1,HeroSkill|Shu|Shield,上阵时获得2点护盾并可免疫一次敌方攻击
+EFFECT_ZY_001,龙胆,OnPlay,GainShield,Self,2,0,HeroSkill|Shu|Shield,上阵时获得2层护盾，每层可抵挡一次敌方攻击
 EFFECT_MC_001,铁骑横扫,OnAttack,ReplaceAttack,EnemyAllSameRow,2,0,HeroSkill|Shu|AreaAttack,攻击对方当前排的所有单位

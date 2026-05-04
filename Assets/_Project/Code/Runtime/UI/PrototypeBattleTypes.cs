@@ -59,6 +59,15 @@ namespace UnifyCountry.UI
             Shield = Mathf.Max(0, Shield + amount);
         }
 
+        public bool TryConsumeShield()
+        {
+            if (Shield <= 0)
+                return false;
+
+            Shield--;
+            return true;
+        }
+
         public void AddAttackImmunity(int charges)
         {
             AttackImmunityCharges = Mathf.Max(0, AttackImmunityCharges + charges);
@@ -78,10 +87,6 @@ namespace UnifyCountry.UI
             var remaining = Mathf.Max(0, amount);
             if (remaining <= 0)
                 return 0;
-
-            var shieldBlocked = Mathf.Min(Shield, remaining);
-            Shield -= shieldBlocked;
-            remaining -= shieldBlocked;
 
             var hpBefore = CurrentHp;
             CurrentHp = Mathf.Max(0, CurrentHp - remaining);

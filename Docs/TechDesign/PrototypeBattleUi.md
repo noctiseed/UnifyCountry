@@ -59,7 +59,7 @@ UnifyCountry / Prototype / Create Battle UI Preview
 - 关卡胜利后可以进入下一关。
 - 点击重开可以重置当前关卡。
 - 英雄技能已接入第一版触发机制：支持上阵、攻击、受伤前和受伤后触发。
-- 当前效果类型支持治疗、攻击加成、护盾、伤害、额外伤害、替代攻击和单次伤害上限。
+- 当前效果类型支持治疗、攻击加成、次数型护盾、伤害、额外伤害、替代攻击和单次伤害上限。
 - 单位 token 会在名称下方、血条上方显示状态短文本，例如 `攻+1`、`盾2`、`免1`、`限4`。
 
 ## Data Files
@@ -93,7 +93,7 @@ effects_v001.csv
 
 - `Heal`
 - `BuffAttack`
-- `GainShield`
+- `GainShield`：增加护盾层数，每层护盾可抵挡一次敌方攻击。
 - `Damage`
 - `BonusDamage`
 - `ReplaceAttack`

@@ -136,4 +136,106 @@ namespace UnifyCountry.UI
                 marker.enabled = false;
         }
     }
+
+    public sealed class PrototypeTooltipHandler : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler
+    {
+        private string message;
+        private Font font;
+        private RectTransform tooltipRect;
+        private Canvas canvas;
+
+        public void Initialize(string message, Font font)
+        {
+            this.message = message;
+            this.font = font;
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (tooltipRect != null)
+                return;
+
+            canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+                return;
+
+            var panelObject = new GameObject("Tooltip", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            panelObject.transform.SetParent(canvas.transform, false);
+            panelObject.transform.SetAsLastSibling();
+
+            tooltipRect = panelObject.GetComponent<RectTransform>();
+            tooltipRect.anchorMin = new Vector2(0f, 0f);
+            tooltipRect.anchorMax = new Vector2(0f, 0f);
+            tooltipRect.pivot = new Vector2(0f, 0f);
+            tooltipRect.sizeDelta = new Vector2(170f, 42f);
+
+            var image = panelObject.GetComponent<Image>();
+            image.color = new Color(0.12f, 0.075f, 0.04f, 0.94f);
+            image.raycastTarget = false;
+
+            var outline = panelObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.98f, 0.82f, 0.42f, 0.7f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            var textObject = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            textObject.transform.SetParent(panelObject.transform, false);
+            var textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(10f, 5f);
+            textRect.offsetMax = new Vector2(-10f, -5f);
+
+            var text = textObject.GetComponent<Text>();
+            text.text = message;
+            text.font = font;
+            text.fontSize = 18;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
+            text.raycastTarget = false;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 12;
+            text.resizeTextMaxSize = 18;
+
+            MoveTooltip(eventData);
+        }
+
+        public void OnPointerMove(PointerEventData eventData)
+        {
+            MoveTooltip(eventData);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            if (tooltipRect == null)
+                return;
+
+            Destroy(tooltipRect.gameObject);
+            tooltipRect = null;
+        }
+
+        private void MoveTooltip(PointerEventData eventData)
+        {
+            if (tooltipRect == null || canvas == null)
+                return;
+
+            var scaleFactor = Mathf.Max(0.01f, canvas.scaleFactor);
+            var position = eventData.position / scaleFactor + new Vector2(14f, 16f);
+            var canvasRect = canvas.GetComponent<RectTransform>();
+            if (canvasRect != null)
+            {
+                var maxX = canvasRect.rect.width - tooltipRect.sizeDelta.x - 8f;
+                var maxY = canvasRect.rect.height - tooltipRect.sizeDelta.y - 8f;
+                position.x = Mathf.Clamp(position.x, 8f, Mathf.Max(8f, maxX));
+                position.y = Mathf.Clamp(position.y, 8f, Mathf.Max(8f, maxY));
+            }
+
+            tooltipRect.anchoredPosition = position;
+        }
+
+        private void OnDisable()
+        {
+            if (tooltipRect != null)
+                Destroy(tooltipRect.gameObject);
+        }
+    }
 }
