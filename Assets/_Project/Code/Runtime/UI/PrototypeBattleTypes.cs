@@ -6,16 +6,18 @@ namespace UnifyCountry.UI
 {
     internal readonly struct FormationMove
     {
-        public FormationMove(int unitRuntimeId, int fromSlotIndex, int toSlotIndex)
+        public FormationMove(int unitRuntimeId, int fromSlotIndex, int toSlotIndex, bool playerSide)
         {
             UnitRuntimeId = unitRuntimeId;
             FromSlotIndex = fromSlotIndex;
             ToSlotIndex = toSlotIndex;
+            PlayerSide = playerSide;
         }
 
         public int UnitRuntimeId { get; }
         public int FromSlotIndex { get; }
         public int ToSlotIndex { get; }
+        public bool PlayerSide { get; }
     }
 
     internal sealed class BattleUnit

@@ -167,7 +167,7 @@ namespace UnifyCountry.UI
             SetRect(skyBand.rectTransform, new Vector2(0f, 0.88f), Vector2.one, Vector2.zero, Vector2.zero);
         }
 
-        private RectTransform CreatePanel(Transform parent, string title, Color color)
+        private RectTransform CreatePanel(Transform parent, string title, Color color, bool showTitle = true)
         {
             var panel = CreateImage(parent, title, color);
             panel.raycastTarget = false;
@@ -176,8 +176,11 @@ namespace UnifyCountry.UI
             outline.effectColor = new Color(0.22f, 0.16f, 0.1f);
             outline.effectDistance = new Vector2(4f, -4f);
 
-            var label = CreateText(panel.transform, title, 26, TextAnchor.MiddleCenter, new Color(0.18f, 0.12f, 0.08f));
-            SetRect(label.rectTransform, new Vector2(0f, 0.86f), Vector2.one, Vector2.zero, Vector2.zero);
+            if (showTitle)
+            {
+                var label = CreateText(panel.transform, title, 26, TextAnchor.MiddleCenter, new Color(0.18f, 0.12f, 0.08f));
+                SetRect(label.rectTransform, new Vector2(0f, 0.86f), Vector2.one, Vector2.zero, Vector2.zero);
+            }
 
             return panel.rectTransform;
         }

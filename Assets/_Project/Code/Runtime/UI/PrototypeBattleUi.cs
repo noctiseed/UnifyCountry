@@ -984,7 +984,7 @@ namespace UnifyCountry.UI
                     continue;
 
                 if (oldSlots.TryGetValue(unit.RuntimeId, out var fromSlot) && fromSlot != i)
-                    moves.Add(new FormationMove(unit.RuntimeId, fromSlot, i));
+                    moves.Add(new FormationMove(unit.RuntimeId, fromSlot, i, playerSide));
             }
 
             return moves;
@@ -1006,8 +1006,8 @@ namespace UnifyCountry.UI
                 rects.Add(rect);
                 startMins.Add(rect.anchorMin);
                 startMaxes.Add(rect.anchorMax);
-                targetMins.Add(GetUnitAnchorMin(move.ToSlotIndex));
-                targetMaxes.Add(GetUnitAnchorMax(move.ToSlotIndex));
+                targetMins.Add(GetUnitAnchorMin(move.ToSlotIndex, move.PlayerSide));
+                targetMaxes.Add(GetUnitAnchorMax(move.ToSlotIndex, move.PlayerSide));
             }
 
             var elapsed = 0f;
@@ -1060,12 +1060,12 @@ namespace UnifyCountry.UI
             var status = CreateText(canvas.transform, $"第 {currentLevelIndex + 1} 关  |  第 {turnNumber} 回合  |  下一波 {nextWaveLabel}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
             SetRect(status.rectTransform, new Vector2(0.18f, 0.91f), new Vector2(0.82f, 0.97f), Vector2.zero, Vector2.zero);
 
-            var playerPanel = CreatePanel(canvas.transform, "友方阵地", playerPanelColor);
+            var playerPanel = CreatePanel(canvas.transform, "友方阵地", playerPanelColor, false);
             SetRect(playerPanel, new Vector2(0.02f, 0.31f), new Vector2(0.49f, 0.88f), Vector2.zero, Vector2.zero);
             BuildPlayerBase(playerPanel.transform);
             BuildBoard(playerPanel.transform, true, playerUnits);
 
-            var enemyPanel = CreatePanel(canvas.transform, "敌方阵地", enemyPanelColor);
+            var enemyPanel = CreatePanel(canvas.transform, "敌方阵地", enemyPanelColor, false);
             SetRect(enemyPanel, new Vector2(0.51f, 0.31f), new Vector2(0.98f, 0.88f), Vector2.zero, Vector2.zero);
             BuildBoard(enemyPanel.transform, false, enemyUnits);
             BuildUpcomingWaveHint(enemyPanel.transform);
@@ -1177,13 +1177,15 @@ namespace UnifyCountry.UI
 
         private void BuildBoard(Transform parent, bool playerSide, List<BattleUnit> units)
         {
+            EnsureFormationSlotCount(units);
+
             for (var row = 0; row < FormationRows; row++)
             {
                 for (var column = 0; column < MaxFormationSlots; column++)
                 {
                     var slotIndex = GetSlotIndex(row, column);
                     var slot = CreateImage(parent, $"Slot R{row + 1} C{column + 1}", GetSlotColor(row));
-                    SetRect(slot.rectTransform, GetSlotAnchorMin(slotIndex), GetSlotAnchorMax(slotIndex), Vector2.zero, Vector2.zero);
+                    SetRect(slot.rectTransform, GetSlotAnchorMin(slotIndex, playerSide), GetSlotAnchorMax(slotIndex, playerSide), Vector2.zero, Vector2.zero);
 
                     var outline = slot.gameObject.AddComponent<Outline>();
                     outline.effectColor = new Color(0.35f, 0.25f, 0.16f, 0.7f);
@@ -1206,14 +1208,14 @@ namespace UnifyCountry.UI
                     index = overrideSlot;
 
                 var unit = CreateUnitToken(parent, battleUnit, false);
-                SetRect(unit, GetUnitAnchorMin(index), GetUnitAnchorMax(index), Vector2.zero, Vector2.zero);
+                SetRect(unit, GetUnitAnchorMin(index, playerSide), GetUnitAnchorMax(index, playerSide), Vector2.zero, Vector2.zero);
                 unit.localScale = Vector3.one * GetDepthScale(index);
                 unitViews[battleUnit.RuntimeId] = unit;
             }
 
             if (playerSide && !isResolvingTurn && CountPlayerUnits() < TotalFormationSlots)
             {
-                for (var i = 0; i < TotalFormationSlots; i++)
+                for (var i = 0; i < Mathf.Min(TotalFormationSlots, units.Count); i++)
                 {
                     if (units[i] == null)
                         CreatePlayerInsertDropZone(parent, i);
@@ -1224,10 +1226,19 @@ namespace UnifyCountry.UI
             }
         }
 
+        private static void EnsureFormationSlotCount(List<BattleUnit> units)
+        {
+            if (units == null)
+                return;
+
+            while (units.Count < TotalFormationSlots)
+                units.Add(null);
+        }
+
         private void BuildPlayerBase(Transform parent)
         {
             var root = CreateImage(parent, "大本营", new Color(0.88f, 0.72f, 0.42f));
-            SetRect(root.rectTransform, new Vector2(0.34f, 0.75f), new Vector2(0.66f, 0.86f), Vector2.zero, Vector2.zero);
+            SetRect(root.rectTransform, new Vector2(0.34f, 0.88f), new Vector2(0.66f, 0.98f), Vector2.zero, Vector2.zero);
 
             var outline = root.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0.28f, 0.18f, 0.08f);
@@ -1360,41 +1371,47 @@ namespace UnifyCountry.UI
             return new Color(1f, 1f, 1f, alpha);
         }
 
-        private static Vector2 GetSlotCenter(int slotIndex)
+        private static Vector2 GetSlotCenter(int slotIndex, bool playerSide = true)
         {
             var row = GetSlotRow(slotIndex);
             var column = GetSlotColumn(slotIndex);
             var rowOffset = row - 1;
-            return new Vector2(0.16f + column * 0.165f + rowOffset * 0.055f, 0.60f - row * 0.20f);
+            var playerX = 0.16f + column * 0.165f + rowOffset * 0.055f;
+            if (playerSide)
+                return new Vector2(playerX, 0.70f - row * 0.25f);
+
+            var mirroredColumn = MaxFormationSlots - 1 - column;
+            var mirroredPlayerX = 0.16f + mirroredColumn * 0.165f + rowOffset * 0.055f;
+            return new Vector2(1f - mirroredPlayerX, 0.70f - row * 0.25f);
         }
 
-        private static Vector2 GetSlotAnchorMin(int slotIndex)
+        private static Vector2 GetSlotAnchorMin(int slotIndex, bool playerSide = true)
         {
-            var center = GetSlotCenter(slotIndex);
+            var center = GetSlotCenter(slotIndex, playerSide);
             const float width = 0.074f;
             const float height = 0.068f;
             return new Vector2(center.x - width, center.y - height);
         }
 
-        private static Vector2 GetSlotAnchorMax(int slotIndex)
+        private static Vector2 GetSlotAnchorMax(int slotIndex, bool playerSide = true)
         {
-            var center = GetSlotCenter(slotIndex);
+            var center = GetSlotCenter(slotIndex, playerSide);
             const float width = 0.074f;
             const float height = 0.068f;
             return new Vector2(center.x + width, center.y + height);
         }
 
-        private static Vector2 GetUnitAnchorMin(int slotIndex)
+        private static Vector2 GetUnitAnchorMin(int slotIndex, bool playerSide = true)
         {
-            var center = GetSlotCenter(slotIndex);
+            var center = GetSlotCenter(slotIndex, playerSide);
             const float width = 0.058f;
             const float height = 0.15f;
             return new Vector2(center.x - width, center.y - height * 0.55f);
         }
 
-        private static Vector2 GetUnitAnchorMax(int slotIndex)
+        private static Vector2 GetUnitAnchorMax(int slotIndex, bool playerSide = true)
         {
-            var center = GetSlotCenter(slotIndex);
+            var center = GetSlotCenter(slotIndex, playerSide);
             const float width = 0.058f;
             const float height = 0.15f;
             return new Vector2(center.x + width, center.y + height);
@@ -1592,7 +1609,7 @@ namespace UnifyCountry.UI
 
             var textColor = hasSprite ? Color.white : new Color(0.12f, 0.08f, 0.05f);
             var name = CreateText(root.transform, unit.Name, compact ? 15 : 16, TextAnchor.MiddleCenter, textColor);
-            SetRect(name.rectTransform, hasSprite ? new Vector2(-0.06f, 0.86f) : new Vector2(0.02f, 0.82f), hasSprite ? new Vector2(1.06f, 1.02f) : new Vector2(0.98f, 0.98f), Vector2.zero, Vector2.zero);
+            SetRect(name.rectTransform, hasSprite ? new Vector2(-0.06f, 0.96f) : new Vector2(0.02f, 0.92f), hasSprite ? new Vector2(1.06f, 1.12f) : new Vector2(0.98f, 1.08f), Vector2.zero, Vector2.zero);
             if (hasSprite)
                 name.gameObject.AddComponent<Outline>().effectColor = new Color(0.12f, 0.06f, 0.04f, 0.9f);
 
