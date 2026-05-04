@@ -2,7 +2,7 @@ rule_key,value,note
 cards_draw_per_turn,3,Draw 3 cards each turn.
 initial_prepare_allows_play,true,Player can play cards before the first enemy wave spawns.
 first_hand_guarantee_heroes,true,All player hero cards must appear in the first hand.
-enemy_wave_spawn_timing,AfterPlayerEndTurn,Wave spawns after the player clicks end turn.
+enemy_wave_spawn_timing,TurnStartNoAttack,Wave enters at the start of each formal turn and does not attack immediately.
 enemy_attacks_first,true,Enemy side attacks before player side after each player turn ends.
 player_max_board_units,5,Player board capacity for the first prototype.
 enemy_max_board_units,5,Enemy board capacity for the first prototype.

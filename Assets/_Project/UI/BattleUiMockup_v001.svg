@@ -2,7 +2,7 @@
   <rect width="1600" height="900" fill="#efe2b8"/>
   <rect width="1600" height="120" fill="#3f8bb5"/>
   <text x="800" y="70" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="42" font-weight="700" fill="#fff">三国卡牌战线 - 战斗原型</text>
-  <text x="800" y="112" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" fill="#3a2618">准备阶段：英雄卡首回合必定到手，点击结束回合后敌方波次出现</text>
+  <text x="800" y="112" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" fill="#3a2618">准备阶段：5 费抽 5 张；正式回合敌方波次先进场但不攻击</text>
 
   <rect x="32" y="150" width="736" height="470" rx="18" fill="#beeaa6" stroke="#392719" stroke-width="5"/>
   <text x="400" y="195" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="700" fill="#332014">友方阵地</text>
@@ -54,7 +54,7 @@
   </g>
 
   <rect x="32" y="650" width="1280" height="210" rx="18" fill="#faefb8" stroke="#392719" stroke-width="5"/>
-  <text x="672" y="693" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="30" font-weight="700" fill="#332014">第一回合手牌 / 初始牌库预览</text>
+  <text x="672" y="693" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="30" font-weight="700" fill="#332014">准备阶段手牌 / 初始牌库预览</text>
 
   <g font-family="Microsoft YaHei, Arial, sans-serif" text-anchor="middle">
     <g transform="translate(70 715)">

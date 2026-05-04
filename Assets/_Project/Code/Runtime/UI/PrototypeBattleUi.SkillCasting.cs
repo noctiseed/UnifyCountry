@@ -81,7 +81,7 @@ namespace UnifyCountry.UI
 
             if (currentEnergy < card.Cost)
             {
-                AddBattleLogEntry($"{card.CardName} cannot be cast: insufficient energy.");
+                AddBattleLogEntry($"费用不足：{card.CardName} 需要 {card.Cost} 点费用。");
                 BuildUi();
                 return;
             }
@@ -180,7 +180,7 @@ namespace UnifyCountry.UI
             var target = NormalizeSkillTarget(rawTarget);
             if (!IsValidSkillTarget(target))
             {
-                AddBattleLogEntry($"{castingSkillCard.CardName} cannot be cast on that target.");
+                AddBattleLogEntry($"{castingSkillCard.CardName} 不能对该目标释放。");
                 SetSkillTargetHighlights(target, false);
                 SetSkillArrowValid(false);
                 return;
@@ -378,7 +378,7 @@ namespace UnifyCountry.UI
             currentEnergy -= card.Cost;
             discardPile.Add(card);
 
-            var logLines = new List<string> { $"{card.CardName} cast, spent {card.Cost} energy." };
+            var logLines = new List<string> { $"释放「{card.CardName}」，消耗 {card.Cost} 点费用。" };
             ResolveSkillCardEffects(card, target, logLines);
             CancelSkillCast();
             CommitTurnLog(logLines);
@@ -389,7 +389,7 @@ namespace UnifyCountry.UI
         {
             if (card.Effects.Count == 0)
             {
-                logLines.Add($"{card.CardName} resolved. Effect implementation is pending.");
+                logLines.Add($"「{card.CardName}」已释放，但效果尚未实现。");
                 return;
             }
 
@@ -399,36 +399,36 @@ namespace UnifyCountry.UI
                 {
                     case "DrawCards":
                         var drawn = DrawCardsWithCount(effect.Value);
-                        logLines.Add($"{card.CardName} drew {drawn} card(s).");
+                        logLines.Add($"「{card.CardName}」抽取 {drawn} 张牌。");
                         break;
                     case "Heal":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                         {
                             unit.Heal(effect.Value);
-                            logLines.Add($"{card.CardName} healed {unit.Name} for {effect.Value}.");
+                            logLines.Add($"「{card.CardName}」治疗 {unit.Name} {effect.Value} 点。");
                         }
                         break;
                     case "BuffAttack":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                         {
                             unit.AddAttack(effect.Value);
-                            logLines.Add($"{card.CardName} gave {unit.Name} attack +{effect.Value}.");
+                            logLines.Add($"「{card.CardName}」使 {unit.Name} 攻击 +{effect.Value}。");
                         }
                         break;
                     case "GainShield":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                         {
                             unit.AddShield(effect.Value);
-                            logLines.Add($"{card.CardName} gave {unit.Name} {effect.Value} shield.");
+                            logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.Value} 层护盾。");
                         }
                         break;
                     case "Damage":
                     case "BonusDamage":
                         foreach (var unit in ResolveSkillTargetUnits(target))
-                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"{card.CardName} hit {unit.Name}", false);
+                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", false);
                         break;
                     default:
-                        logLines.Add($"{card.CardName} effect {effect.EffectType} is not implemented yet.");
+                        logLines.Add($"「{card.CardName}」的效果类型 {effect.EffectType} 尚未实现。");
                         break;
                 }
             }

@@ -51,6 +51,12 @@ namespace UnifyCountry.UI
         private const float FormationMoveDuration = 0.45f;
         private const string InitialBattleLog = "拖动手牌到友方阵地上阵，然后点击结束回合。";
 
+        private enum BattlePhase
+        {
+            InitialPrepare,
+            PlayerAction
+        }
+
         private Dictionary<string, CardRecord> cardMap = new Dictionary<string, CardRecord>();
         private Dictionary<string, Sprite> cardPortraitMap = new Dictionary<string, Sprite>();
         private readonly List<CardRecord> drawPile = new List<CardRecord>();
@@ -63,13 +69,14 @@ namespace UnifyCountry.UI
         private readonly Dictionary<int, int> animatedSlotOverrides = new Dictionary<int, int>();
         private List<BattleLevelRecord> levels = new List<BattleLevelRecord>();
 
-        private int turnNumber = 1;
+        private int turnNumber;
         private int currentLevelIndex;
         private int nextWaveIndex;
         private int nextUnitRuntimeId = 1;
         private int currentEnergy = InitialPrepareEnergy;
         private int playerBaseHp = PlayerBaseMaxHp;
         private string battleLog = InitialBattleLog;
+        private BattlePhase battlePhase = BattlePhase.InitialPrepare;
         private bool initialized;
         private bool isResolvingTurn;
         private bool battleEnded;
@@ -144,9 +151,10 @@ namespace UnifyCountry.UI
                     drawPile.Add(card);
             }
 
-            turnNumber = 1;
+            turnNumber = 0;
             nextWaveIndex = 0;
             currentEnergy = InitialPrepareEnergy;
+            battlePhase = BattlePhase.InitialPrepare;
             Shuffle(drawPile);
             DrawInitialHand();
             AddBattleLogEntry($"准备阶段：获得 {InitialPrepareEnergy} 点费用，英雄卡优先进入初始手牌，补足 {InitialHandSize} 张。");
@@ -478,27 +486,42 @@ namespace UnifyCountry.UI
 
         private void EndTurn()
         {
-            if (isResolvingTurn)
+            if (isResolvingTurn || battleEnded)
                 return;
 
-            StartCoroutine(ResolveTurnRoutine());
+            if (battlePhase == BattlePhase.InitialPrepare)
+            {
+                StartCoroutine(AdvanceFromInitialPrepareRoutine());
+                return;
+            }
+
+            StartCoroutine(ResolvePlayerTurnRoutine());
         }
 
-        private IEnumerator ResolveTurnRoutine()
+        private IEnumerator AdvanceFromInitialPrepareRoutine()
         {
             isResolvingTurn = true;
 
             var logLines = new List<string>();
-            logLines.Add($"第 {turnNumber} 回合结束。");
+            logLines.Add("准备阶段结束，敌方第一波即将进场。");
             DiscardHand(logLines);
             DiscardUnplayedInitialHeroes(logLines);
 
             yield return StartCoroutine(AdvanceFormationsRoutine(logLines));
 
-            SpawnCurrentWave(logLines);
-            UpdateActiveTurnLog(logLines);
+            StartNextPlayerTurn(logLines);
+            CommitTurnLog(logLines);
+            isResolvingTurn = false;
             BuildUi();
-            yield return new WaitForSeconds(0.75f);
+        }
+
+        private IEnumerator ResolvePlayerTurnRoutine()
+        {
+            isResolvingTurn = true;
+
+            var logLines = new List<string>();
+            logLines.Add($"第 {turnNumber} 回合行动结束，进入战斗结算。");
+            DiscardHand(logLines);
 
             ResolveEnemyAttack(logLines);
             UpdateActiveTurnLog(logLines);
@@ -531,13 +554,22 @@ namespace UnifyCountry.UI
                 yield break;
             }
 
-            turnNumber++;
-            currentEnergy = MaxEnergy;
-            var drawCount = DrawCardsWithCount(CardsDrawnPerTurn);
-            logLines.Add($"进入第 {turnNumber} 回合，费用恢复到 {MaxEnergy}，从抽牌堆抽 {drawCount} 张牌。");
+            StartNextPlayerTurn(logLines);
             CommitTurnLog(logLines);
             isResolvingTurn = false;
             BuildUi();
+        }
+
+        private void StartNextPlayerTurn(List<string> logLines)
+        {
+            turnNumber++;
+            battlePhase = BattlePhase.PlayerAction;
+
+            SpawnCurrentWave(logLines);
+
+            currentEnergy = MaxEnergy;
+            var drawCount = DrawCardsWithCount(CardsDrawnPerTurn);
+            logLines.Add($"进入第 {turnNumber} 回合：敌方单位进场后暂不攻击，费用恢复到 {MaxEnergy}，从抽牌堆抽 {drawCount} 张牌。");
         }
 
         private int DrawCardsWithCount(int count)
@@ -606,7 +638,7 @@ namespace UnifyCountry.UI
 
         private void DiscardUnplayedInitialHeroes(List<string> logLines)
         {
-            if (turnNumber != 1)
+            if (battlePhase != BattlePhase.InitialPrepare)
                 return;
 
             var heroes = drawPile
@@ -1059,7 +1091,8 @@ namespace UnifyCountry.UI
             var waves = CurrentWaves;
             var waveCount = waves == null ? 0 : waves.Count;
             var nextWaveLabel = waveCount == 0 ? "0 / 0" : $"{Mathf.Min(nextWaveIndex + 1, waveCount)} / {waveCount}";
-            var status = CreateText(canvas.transform, $"第 {currentLevelIndex + 1} 关  |  第 {turnNumber} 回合  |  下一波 {nextWaveLabel}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
+            var turnLabel = battlePhase == BattlePhase.InitialPrepare ? "准备阶段" : $"第 {turnNumber} 回合";
+            var status = CreateText(canvas.transform, $"第 {currentLevelIndex + 1} 关  |  {turnLabel}  |  下一波 {nextWaveLabel}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
             SetRect(status.rectTransform, new Vector2(0.18f, 0.91f), new Vector2(0.82f, 0.97f), Vector2.zero, Vector2.zero);
 
             var playerPanel = CreatePanel(canvas.transform, "友方阵地", playerPanelColor, false);
@@ -1075,7 +1108,7 @@ namespace UnifyCountry.UI
             var drawPilePanel = CreateInfoBlock(canvas.transform, "抽牌堆", drawPile.Count.ToString(), new Color(0.72f, 0.84f, 0.95f));
             SetRect(drawPilePanel, new Vector2(0.02f, 0.03f), new Vector2(0.1f, 0.28f), Vector2.zero, Vector2.zero);
 
-            var maxEnergyThisTurn = turnNumber == 1 ? InitialPrepareEnergy : MaxEnergy;
+            var maxEnergyThisTurn = battlePhase == BattlePhase.InitialPrepare ? InitialPrepareEnergy : MaxEnergy;
             var energyPanel = CreateInfoBlock(canvas.transform, "费用", $"{currentEnergy}/{maxEnergyThisTurn}", new Color(0.98f, 0.8f, 0.38f));
             SetRect(energyPanel, new Vector2(0.115f, 0.03f), new Vector2(0.19f, 0.28f), Vector2.zero, Vector2.zero);
 

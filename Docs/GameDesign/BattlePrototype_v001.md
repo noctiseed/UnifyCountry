@@ -111,11 +111,16 @@ InitialPrepare
   玩家初始准备回合拥有 5 点费用
   玩家可以出牌
 
-PlayerEndTurn
-  玩家点击结束回合
+PrepareEnd
+  玩家点击结束回合，准备阶段结束并进入第 1 回合
 
-WaveSpawn
+TurnStart
   当前回合对应敌方波次出现
+  敌方单位站场，但不触发攻击
+  玩家费用恢复到 3 点，抽 3 张牌并继续操作
+
+PlayerEndTurn
+  玩家点击结束回合，进入战斗结算
 
 EnemyAttack
   敌方按排从左到右依次攻击，每个单位攻击一次
@@ -131,7 +136,7 @@ TurnResolve
   结算死亡与胜负
 
 NextTurn
-  玩家费用恢复到 3 点，抽 3 张牌并继续操作
+  进入下一回合的 TurnStart
 ```
 
 ## Level Rules
