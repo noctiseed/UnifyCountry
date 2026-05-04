@@ -416,6 +416,14 @@ namespace UnifyCountry.UI
                             logLines.Add($"「{card.CardName}」使 {unit.Name} 攻击 +{effect.Value}。");
                         }
                         break;
+                    case "BuffAttackAndMaxHp":
+                        foreach (var unit in ResolveSkillTargetUnits(target))
+                        {
+                            unit.AddAttack(effect.Value);
+                            unit.AddMaxHp(effect.SecondaryValue, true);
+                            logLines.Add($"「{card.CardName}」使 {unit.Name} 攻击 +{effect.Value}，最大血量 +{effect.SecondaryValue}，并恢复 {effect.SecondaryValue} 点生命。");
+                        }
+                        break;
                     case "GainShield":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                         {
@@ -427,6 +435,18 @@ namespace UnifyCountry.UI
                     case "BonusDamage":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                             DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", false);
+                        break;
+                    case "DamageGainEnergyOnKill":
+                        foreach (var unit in ResolveSkillTargetUnits(target))
+                        {
+                            var wasAlive = unit != null && !unit.IsDead;
+                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", false);
+                            if (wasAlive && unit != null && unit.IsDead)
+                            {
+                                currentEnergy += effect.SecondaryValue;
+                                logLines.Add($"「{card.CardName}」击杀 {unit.Name}，获得 {effect.SecondaryValue} 点可使用费用。");
+                            }
+                        }
                         break;
                     default:
                         logLines.Add($"「{card.CardName}」的效果类型 {effect.EffectType} 尚未实现。");

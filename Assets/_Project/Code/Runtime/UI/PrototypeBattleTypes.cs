@@ -23,11 +23,13 @@ namespace UnifyCountry.UI
     internal sealed class BattleUnit
     {
         private readonly CardRecord card;
+        private int maxHp;
 
         public BattleUnit(CardRecord card, int runtimeId)
         {
             this.card = card;
             RuntimeId = runtimeId;
+            maxHp = card.Hp;
             CurrentHp = card.Hp;
             CurrentAttack = card.Attack;
         }
@@ -37,7 +39,7 @@ namespace UnifyCountry.UI
         public string UnitId => card.UnitId;
         public int Attack => CurrentAttack;
         public int BaseAttack => card.Attack;
-        public int MaxHp => card.Hp;
+        public int MaxHp => maxHp;
         public CardCamp Camp => card.Camp;
         public IReadOnlyList<EffectRecord> Effects => card.Effects;
         public int CurrentAttack { get; private set; }
@@ -54,6 +56,17 @@ namespace UnifyCountry.UI
         public void AddAttack(int amount)
         {
             CurrentAttack = Mathf.Max(0, CurrentAttack + amount);
+        }
+
+        public void AddMaxHp(int amount, bool healByAmount)
+        {
+            var resolvedAmount = Mathf.Max(0, amount);
+            if (resolvedAmount <= 0)
+                return;
+
+            maxHp += resolvedAmount;
+            if (healByAmount)
+                CurrentHp = Mathf.Min(maxHp, CurrentHp + resolvedAmount);
         }
 
         public void AddShield(int amount)

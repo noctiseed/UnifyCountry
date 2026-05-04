@@ -9,5 +9,7 @@ EFFECT_ZY_001,龙胆,OnPlay,GainShield,Self,2,0,HeroSkill|Shu|Shield,上阵时�
 EFFECT_MC_001,铁骑横扫,OnAttack,ReplaceAttack,EnemyAllSameRow,2,0,HeroSkill|Shu|AreaAttack,攻击对方当前军的所有单位
 EFFECT_PLAN_001,滚石,OnPlay,Damage,EnemySingle,3,0,Plan|Damage,对该单位造成3点伤害
 EFFECT_PLAN_002,齐射,OnPlay,Damage,EnemyRow,1,0,Plan|Damage|Area,对敌方当前军的所有单位造成1点伤害
+EFFECT_PLAN_004,强化,OnPlay,BuffAttackAndMaxHp,AllySingle,2,2,Plan|Buff,使该单位获得+2攻击力、+2最大血量
 EFFECT_PLAN_005,加固,OnPlay,GainShield,AllySingle,1,0,Plan|Shield,使该单位获得护盾1
-EFFECT_PLAN_008,草船借箭,OnPlay,DrawCards,NoTarget,2,0,Plan|Draw,抽两张牌
+EFFECT_PLAN_008,斩杀,OnPlay,DamageGainEnergyOnKill,EnemySingle,1,1,Plan|Damage|Energy,造成1点伤害，若直接击杀目标单位，增加1点可使用费用
+EFFECT_PLAN_009,草船借箭,OnPlay,DrawCards,NoTarget,2,0,Plan|Draw,抽两张牌
