@@ -6,3 +6,7 @@ CARD_011,1,unique_hero
 CARD_012,1,unique_hero
 CARD_004,5,repeatable_soldier
 CARD_005,5,repeatable_soldier
+PLAN_001,1,plan
+PLAN_002,1,plan
+PLAN_005,1,plan
+PLAN_008,1,plan

@@ -218,7 +218,7 @@ namespace UnifyCountry.UI
 
         private void PlayCard(CardRecord card)
         {
-            PlayCardAt(card, GetFirstEmptyPlayerSlot());
+            PlayCardFromHand(card, null);
         }
 
         internal bool CanDragCard(CardRecord card)
@@ -1046,6 +1046,8 @@ namespace UnifyCountry.UI
 
         private void BuildUi()
         {
+            CancelSkillCast();
+            ResetSkillTargetHandlers();
             RebuildCardPortraitMap();
             ClearChildren();
             unitViews.Clear();
@@ -1195,6 +1197,8 @@ namespace UnifyCountry.UI
                     var label = CreateText(slot.transform, labelText, 14, TextAnchor.LowerCenter, new Color(0.23f, 0.16f, 0.1f, 0.72f));
                     SetRect(label.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
                 }
+
+                CreateSkillRowTargetZone(parent, row, playerSide);
             }
 
             for (var i = 0; i < units.Count; i++)
@@ -1210,6 +1214,8 @@ namespace UnifyCountry.UI
                 var unit = CreateUnitToken(parent, battleUnit, false);
                 SetRect(unit, GetUnitAnchorMin(index, playerSide), GetUnitAnchorMax(index, playerSide), Vector2.zero, Vector2.zero);
                 unit.localScale = Vector3.one * GetDepthScale(index);
+                var targetHandler = unit.gameObject.AddComponent<SkillTargetHandler>();
+                targetHandler.Initialize(this, SkillTarget.ForUnit(playerSide, GetSlotRow(i), i, battleUnit));
                 unitViews[battleUnit.RuntimeId] = unit;
             }
 
@@ -1536,12 +1542,12 @@ namespace UnifyCountry.UI
 
         private Button CreateCard(Transform parent, CardRecord card)
         {
-            var color = card.CardType == CardType.Unit && card.UnitType == UnitType.Hero ? heroCardColor : soldierCardColor;
+            var color = GetCardColor(card);
             var image = CreateImage(parent, card.CardName, color);
 
             var button = image.gameObject.AddComponent<Button>();
             button.transition = Selectable.Transition.None;
-            button.onClick.AddListener(() => PlayCard(card));
+            button.onClick.AddListener(() => PlayCardFromHand(card, image.rectTransform));
             button.interactable = !isResolvingTurn && currentEnergy >= card.Cost;
             var canvasGroup = image.gameObject.AddComponent<CanvasGroup>();
             var dragHandler = image.gameObject.AddComponent<CardDragHandler>();

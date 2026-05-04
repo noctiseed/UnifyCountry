@@ -47,6 +47,9 @@ namespace UnifyCountry.Config
                     }
                 }
 
+                if (!string.IsNullOrWhiteSpace(card.EffectId) && effectMap.TryGetValue(card.EffectId, out var cardEffect) && !card.Effects.Contains(cardEffect))
+                    card.Effects.Add(cardEffect);
+
                 records.Add(card);
             }
 
