@@ -7,6 +7,7 @@ EFFECT_XHD_001,刚烈,OnDamaged,BuffAttack,Self,1,0,HeroSkill|Wei,每次受击�
 EFFECT_CR_001,固守,BeforeDamaged,DamageCap,Self,4,0,HeroSkill|Wei,每次受到伤害时最多只受到4点伤害
 EFFECT_ZY_001,龙胆,OnPlay,GainShield,Self,2,0,HeroSkill|Shu|Shield,上阵时获得2层护盾，每层可抵挡一次敌方攻击
 EFFECT_MC_001,铁骑横扫,OnAttack,ReplaceAttack,EnemyAllSameRow,2,0,HeroSkill|Shu|AreaAttack,攻击对方当前军的所有单位
+EFFECT_JY_001,论客,OnTurnStart,DrawCards,Self,1,0,HeroSkill|Shu|Draw,当该英雄存活在场上时，每回合额外抽1张牌
 EFFECT_PLAN_001,滚石,OnPlay,Damage,EnemySingle,3,0,Plan|Damage,对该单位造成3点伤害
 EFFECT_PLAN_002,齐射,OnPlay,Damage,EnemyRow,1,0,Plan|Damage|Area,对敌方当前军的所有单位造成1点伤害
 EFFECT_PLAN_003,疗伤,OnPlay,HealAndGainRevival,AllySingle,2,2,Plan|Heal|Buff,使该单位恢复2点生命，并获得2层复苏

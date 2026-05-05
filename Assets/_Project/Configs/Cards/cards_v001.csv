@@ -11,6 +11,7 @@ CARD_009,刀兵,Unit,1,Enemy,Wei,Common,99,CARD_009,,enemy_soldier
 CARD_010,骑兵,Unit,1,Enemy,Wei,Common,99,CARD_010,,enemy_soldier
 CARD_011,赵云,Unit,2,Player,Shu,Rare,1,CARD_011,,player_hero
 CARD_012,马超,Unit,2,Player,Shu,Rare,1,CARD_012,,player_hero
+CARD_013,简雍,Unit,1,Player,Shu,Rare,1,CARD_013,,player_hero
 PLAN_001,滚石,Skill,1,Player,Neutral,Common,99,PLAN_001,EFFECT_PLAN_001,plan_rockfall
 PLAN_002,齐射,Skill,1,Player,Neutral,Common,99,PLAN_002,EFFECT_PLAN_002,plan_volley
 PLAN_003,疗伤,Skill,1,Player,Neutral,Common,99,PLAN_003,EFFECT_PLAN_003,plan_heal

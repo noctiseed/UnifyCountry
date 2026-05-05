@@ -579,6 +579,22 @@ namespace UnifyCountry.UI
             currentEnergy = MaxEnergy;
             var drawCount = DrawCardsWithCount(CardsDrawnPerTurn);
             logLines.Add($"进入第 {turnNumber} 回合：敌方单位进场后暂不攻击，费用恢复到 {MaxEnergy}，从抽牌堆抽 {drawCount} 张牌。");
+            TriggerPlayerTurnStartEffects(logLines);
+        }
+
+        private void TriggerPlayerTurnStartEffects(List<string> logLines)
+        {
+            for (var row = 0; row < FormationRows; row++)
+            {
+                for (var column = 0; column < MaxFormationSlots; column++)
+                {
+                    var unit = playerUnits[GetSlotIndex(row, column)];
+                    if (unit == null || unit.IsDead)
+                        continue;
+
+                    TriggerEffects(unit, "OnTurnStart", row, null, logLines);
+                }
+            }
         }
 
         private int DrawCardsWithCount(int count)
@@ -823,6 +839,10 @@ namespace UnifyCountry.UI
                         target.AddShield(effect.Value);
                         logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 层护盾。");
                     }
+                    break;
+                case "DrawCards":
+                    var drawn = DrawCardsWithCount(effect.Value);
+                    logLines.Add($"{source.Name} 触发「{effect.EffectName}」，额外抽 {drawn} 张牌。");
                     break;
                 case "BonusDamage":
                 case "Damage":

@@ -11,3 +11,4 @@ CARD_009,UNIT_009,刀兵,Soldier,6,4,Frontline,Soldier|Melee,
 CARD_010,UNIT_010,骑兵,Soldier,3,7,Assault,Soldier|Cavalry,
 CARD_011,UNIT_011,赵云,Hero,10,5,Guard,Hero|Shu|Shield,EFFECT_ZY_001
 CARD_012,UNIT_012,马超,Hero,9,2,Cleave,Hero|Shu|AreaAttack,EFFECT_MC_001
+CARD_013,UNIT_013,简雍,Hero,2,2,Support,Hero|Shu|Draw,EFFECT_JY_001
