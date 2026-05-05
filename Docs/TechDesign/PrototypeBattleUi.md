@@ -29,7 +29,8 @@ UnifyCountry / Prototype / Create Battle UI Preview
 - 底部手牌、抽牌堆、弃牌堆与费用
 - 结束回合按钮
 - 根据卡牌数据生成的卡通风卡牌块
-- 英雄卡会显示从 `effects_v001.csv` 读取到的技能名
+- 英雄卡和计谋牌会显示从 `effects_v001.csv` 读取到的效果名
+- 计谋牌施法时会显示选中高亮、目标高亮和虚线指向箭头
 
 ## Playable Prototype
 
@@ -40,16 +41,21 @@ UnifyCountry / Prototype / Create Battle UI Preview
 - 初始回合结束时，手牌中未使用的牌进入弃牌堆，抽牌堆中剩余的英雄卡也进入弃牌堆。
 - 后续回合每回合抽 3 张牌，不再触发英雄卡保底。
 - 初始准备回合拥有 5 点费用，后续回合统一恢复到 3 点费用。
-- 玩家英雄费用从 `cards_v001.csv` 读取，当前刘备为 1，关羽、张飞、赵云、马超为 2。
+- 玩家英雄费用从 `cards_v001.csv` 读取，当前刘备、简雍为 1，关羽、张飞、赵云、马超为 2。
+- 当前初始牌库包含 6 张玩家英雄、盾牌兵 x5、弓箭手 x5，以及 7 张计谋牌。
 - 波次配置支持按关卡分组，并能指定敌人出生在哪一排。
 - 当前包含 2 个关卡；第 1 关沿用原有三波，第 2 关包含多排出兵与曹操后排跟随。
 - 点击手牌可以将单位上阵。
 - 可以拖动手牌到友方阵地空格上阵。
 - 可以在同排两个单位之间，或该排最右侧单位右边插入新单位；插入只在同一排内挤位。
 - 上阵会消耗费用，费用不足时无法出牌。
+- 点击计谋牌会进入施法状态，右键或 `Esc` 可以取消施法。
+- 计谋牌支持友方单体、敌方单体、敌方整排和无目标立即释放。
+- 计谋牌释放后会消耗费用并进入弃牌堆。
 - 战斗记录会保留每回合历史，并在固定字号的滚动区域中显示。
 - 友方单位按排从右向左承伤，每排最右侧优先被攻击。
 - 正式回合开始时，当前回合对应敌方波次先进场，但不触发攻击。
+- 正式回合开始时，费用恢复到 3 点，抽 3 张牌，然后触发场上玩家单位的 `OnTurnStart` 效果。
 - 玩家点击结束回合后，才进入战斗结算。
 - 敌方先从左到右攻击。
 - 友方随后从右到左反击。
@@ -59,9 +65,12 @@ UnifyCountry / Prototype / Create Battle UI Preview
 - 进入下一正式回合后费用恢复到 3 点，并抽 3 张牌。
 - 关卡胜利后可以进入下一关。
 - 点击重开可以重置当前关卡。
-- 英雄技能已接入第一版触发机制：支持上阵、攻击、受伤前和受伤后触发。
-- 当前效果类型支持治疗、攻击加成、次数型护盾、伤害、额外伤害、替代攻击和单次伤害上限。
-- 单位 token 会在名称下方、血条上方显示状态短文本，例如 `攻+1`、`盾2`、`免1`、`限4`。
+- 英雄技能已接入第一版触发机制：支持上阵、攻击、受伤前、受伤后和玩家正式回合开始触发。
+- 简雍「论客」已接入 `OnTurnStart`：当简雍存活在场上时，每个玩家正式回合开始额外抽 1 张牌。
+- 当前计谋牌包括滚石、齐射、疗伤、强化、加固、斩杀和草船借箭。
+- 复苏 Buff 已接入：回合战斗结算后，存活单位每回合触发一次复苏，按触发前层数恢复生命，并使复苏层数减少 1。
+- 当前效果类型支持治疗、攻击加成、最大血量加成、次数型护盾、复苏、伤害、击杀返费、抽牌、额外伤害、替代攻击和单次伤害上限。
+- 单位 token 会在名称下方、血条上方显示状态短文本，例如 `攻+1`、`盾2`、`免1`、`复2`、`限4`。
 
 ## Data Files
 
@@ -89,6 +98,7 @@ effects_v001.csv
 - `OnAttack`：单位攻击时触发。
 - `BeforeDamaged`：单位受伤前触发，用于伤害修正。
 - `OnDamaged`：单位受伤后触发。
+- `OnTurnStart`：玩家正式回合开始时，对场上存活的玩家单位触发。
 
 当前支持的效果类型：
 
@@ -99,6 +109,10 @@ effects_v001.csv
 - `BonusDamage`
 - `ReplaceAttack`
 - `DamageCap`
+- `DrawCards`
+- `HealAndGainRevival`
+- `BuffAttackAndMaxHp`
+- `DamageGainEnergyOnKill`
 
 当前支持的目标规则：
 
@@ -108,6 +122,22 @@ effects_v001.csv
 - `AllyFrontSameRow`
 - `AllyAllSameRow`
 - `EnemyAllSameRow`
+- `AllySingle`
+- `EnemySingle`
+- `EnemyRow`
+- `NoTarget`
+
+其中 `Self`、`CurrentTarget`、`Attacker`、`AllyFrontSameRow`、`AllyAllSameRow`、`EnemyAllSameRow` 用于单位技能目标解析；`AllySingle`、`EnemySingle`、`EnemyRow`、`NoTarget` 用于计谋牌施法目标需求判定。
+
+当前计谋牌效果：
+
+- `PLAN_001` 滚石：`Damage` + `EnemySingle`，对敌方单体造成 3 点伤害。
+- `PLAN_002` 齐射：`Damage` + `EnemyRow`，对敌方整排所有单位造成 1 点伤害。
+- `PLAN_003` 疗伤：`HealAndGainRevival` + `AllySingle`，治疗 2 点并获得 2 层复苏。
+- `PLAN_004` 强化：`BuffAttackAndMaxHp` + `AllySingle`，攻击 +2，最大血量 +2，并恢复 2 点生命。
+- `PLAN_005` 加固：`GainShield` + `AllySingle`，获得 1 层护盾。
+- `PLAN_008` 斩杀：`DamageGainEnergyOnKill` + `EnemySingle`，造成 1 点伤害，若直接击杀目标则获得 1 点可用费用。
+- `PLAN_009` 草船借箭：`DrawCards` + `NoTarget`，抽 2 张牌。
 
 ## Next Step
 
@@ -115,5 +145,5 @@ effects_v001.csv
 
 - 攻击动画
 - 战斗胜负弹窗
-- 更完整的 BuffInstance 数据结构与持续回合机制
+- 更完整的 BuffInstance 数据结构与持续回合机制，例如将复苏、护盾、免疫、临时攻击等统一到可配置持续时间
 - ScriptableObject 数据资产
