@@ -66,6 +66,7 @@ namespace UnifyCountry.Combat
         public IReadOnlyList<EffectRecord> Effects => card.Effects;
         public int CurrentAttack { get; private set; }
         public int CurrentHp { get; private set; }
+        public int FormationRow { get; set; } = -1;
         public int Shield => GetBuffStacks(BattleBuffType.Shield);
         public int AttackImmunityCharges => GetBuffStacks(BattleBuffType.AttackImmunity);
         public int Revival => GetBuffStacks(BattleBuffType.Revival);

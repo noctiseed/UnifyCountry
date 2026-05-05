@@ -56,9 +56,6 @@ namespace UnifyCountry.Combat
         {
             while (PlayerUnits.Count < BattleFormation.TotalFormationSlots)
                 PlayerUnits.Add(null);
-
-            while (EnemyUnits.Count < BattleFormation.TotalFormationSlots)
-                EnemyUnits.Add(null);
         }
     }
 }

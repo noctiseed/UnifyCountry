@@ -10,6 +10,12 @@ namespace UnifyCountry.UI
     {
         private void BuildBoard(Transform parent, bool playerSide, List<BattleUnit> units)
         {
+            if (!playerSide)
+            {
+                BuildEnemyBoard(parent);
+                return;
+            }
+
             EnsureFormationSlotCount(units);
 
             for (var row = 0; row < FormationRows; row++)
@@ -57,6 +63,40 @@ namespace UnifyCountry.UI
 
                 for (var row = 0; row < FormationRows; row++)
                     CreatePlayerGapDropZonesForRow(parent, row);
+            }
+        }
+
+        private void BuildEnemyBoard(Transform parent)
+        {
+            for (var row = 0; row < FormationRows; row++)
+            {
+                var strip = CreateImage(parent, $"Enemy Row Strip R{row + 1}", GetSlotColor(row));
+                SetRect(strip.rectTransform, GetEnemyRowAnchorMin(row), GetEnemyRowAnchorMax(row), Vector2.zero, Vector2.zero);
+
+                var outline = strip.gameObject.AddComponent<Outline>();
+                outline.effectColor = new Color(0.35f, 0.25f, 0.16f, 0.55f);
+                outline.effectDistance = new Vector2(2f, -2f);
+
+                CreateSkillRowTargetZone(parent, row, false);
+            }
+
+            for (var row = 0; row < FormationRows; row++)
+            {
+                var rowUnits = battleFormation.GetAliveEnemyUnitsInRow(row);
+                for (var column = rowUnits.Count - 1; column >= 0; column--)
+                {
+                    var battleUnit = rowUnits[column];
+                    var positionIndex = BattleFormation.EncodeEnemySlotIndex(row, column, rowUnits.Count);
+                    if (animatedSlotOverrides.TryGetValue(battleUnit.RuntimeId, out var overrideSlot))
+                        positionIndex = overrideSlot;
+
+                    var unit = CreateUnitToken(parent, battleUnit, false);
+                    SetRect(unit, GetEnemyUnitAnchorMin(positionIndex), GetEnemyUnitAnchorMax(positionIndex), Vector2.zero, Vector2.zero);
+                    unit.localScale = Vector3.one;
+                    var targetHandler = unit.gameObject.AddComponent<SkillTargetHandler>();
+                    targetHandler.Initialize(this, SkillTarget.ForUnit(false, row, positionIndex, battleUnit));
+                    unitViews[battleUnit.RuntimeId] = unit;
+                }
             }
         }
 
@@ -242,6 +282,9 @@ namespace UnifyCountry.UI
 
         private static Vector2 GetUnitAnchorMin(int slotIndex, bool playerSide = true)
         {
+            if (!playerSide)
+                return GetEnemyUnitAnchorMin(slotIndex);
+
             var center = GetSlotCenter(slotIndex, playerSide);
             const float width = 0.058f;
             const float height = 0.15f;
@@ -250,7 +293,52 @@ namespace UnifyCountry.UI
 
         private static Vector2 GetUnitAnchorMax(int slotIndex, bool playerSide = true)
         {
+            if (!playerSide)
+                return GetEnemyUnitAnchorMax(slotIndex);
+
             var center = GetSlotCenter(slotIndex, playerSide);
+            const float width = 0.058f;
+            const float height = 0.15f;
+            return new Vector2(center.x + width, center.y + height);
+        }
+
+        private static Vector2 GetEnemyRowAnchorMin(int row)
+        {
+            var centerY = 0.70f - row * 0.25f;
+            return new Vector2(0.06f, centerY - 0.085f);
+        }
+
+        private static Vector2 GetEnemyRowAnchorMax(int row)
+        {
+            var centerY = 0.70f - row * 0.25f;
+            return new Vector2(0.94f, centerY + 0.085f);
+        }
+
+        private static Vector2 GetEnemySlotCenter(int slotIndex)
+        {
+            var row = BattleFormation.GetEnemySlotRow(slotIndex);
+            var column = BattleFormation.GetEnemySlotColumn(slotIndex);
+            var rowUnitCount = BattleFormation.GetEnemySlotRowUnitCount(slotIndex);
+            var rowOffset = (row - 1) * 0.035f;
+            var centerY = 0.70f - row * 0.25f;
+            var startX = 0.15f + rowOffset;
+            const float fullStep = 0.165f;
+            const float maxRightX = 0.86f;
+            var step = rowUnitCount <= 1 ? fullStep : Mathf.Min(fullStep, (maxRightX - startX) / (rowUnitCount - 1));
+            return new Vector2(startX + column * step, centerY);
+        }
+
+        private static Vector2 GetEnemyUnitAnchorMin(int slotIndex)
+        {
+            var center = GetEnemySlotCenter(slotIndex);
+            const float width = 0.058f;
+            const float height = 0.15f;
+            return new Vector2(center.x - width, center.y - height * 0.55f);
+        }
+
+        private static Vector2 GetEnemyUnitAnchorMax(int slotIndex)
+        {
+            var center = GetEnemySlotCenter(slotIndex);
             const float width = 0.058f;
             const float height = 0.15f;
             return new Vector2(center.x + width, center.y + height);

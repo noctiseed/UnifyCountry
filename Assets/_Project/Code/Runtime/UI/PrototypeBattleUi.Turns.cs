@@ -114,11 +114,7 @@ namespace UnifyCountry.UI
                 if (attacker == null || attacker.IsDead)
                     continue;
 
-                var slotIndex = GetUnitSlotIndex(enemyUnits, attacker);
-                if (slotIndex < 0)
-                    continue;
-
-                ResolveEnemyUnitAttack(attacker, GetSlotRow(slotIndex), logLines);
+                ResolveEnemyUnitAttack(attacker, battleFormation.GetEnemyUnitRow(attacker), logLines);
                 RefreshUnitHealthViews();
                 UpdateActiveTurnLog(logLines);
                 yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
@@ -146,7 +142,7 @@ namespace UnifyCountry.UI
             }
         }
 
-        private static List<BattleUnit> CollectAttackers(List<BattleUnit> units, bool playerSide)
+        private List<BattleUnit> CollectAttackers(List<BattleUnit> units, bool playerSide)
         {
             var attackers = new List<BattleUnit>();
             for (var row = 0; row < FormationRows; row++)
@@ -158,8 +154,7 @@ namespace UnifyCountry.UI
                 }
                 else
                 {
-                    for (var column = 0; column < MaxFormationSlots; column++)
-                        AddAttacker(units, attackers, row, column);
+                    attackers.AddRange(battleFormation.GetAliveEnemyUnitsInRow(row));
                 }
             }
 

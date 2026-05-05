@@ -129,11 +129,6 @@ namespace UnifyCountry.UI
             return battleFormation.GetFirstEmptyPlayerSlot();
         }
 
-        private int GetFirstEmptyEnemySlotInRow(int row)
-        {
-            return battleFormation.GetFirstEmptyEnemySlotInRow(row);
-        }
-
         private int CountPlayerUnits()
         {
             return battleFormation.CountPlayerUnits();

@@ -8,6 +8,7 @@ namespace UnifyCountry.Combat
         public const int MaxFormationSlots = 5;
         public const int FormationRows = 3;
         public const int TotalFormationSlots = MaxFormationSlots * FormationRows;
+        private const int EnemySlotStride = 1000;
 
         private readonly BattleState state;
 
@@ -98,19 +99,33 @@ namespace UnifyCountry.Combat
             return GetSlotIndex(1, MaxFormationSlots - 1);
         }
 
-        public int GetFirstEmptyEnemySlotInRow(int row)
+        public void AddEnemyUnitToRow(BattleUnit unit, int row)
         {
-            if (row < 0 || row >= FormationRows)
+            if (unit == null || row < 0 || row >= FormationRows)
+                return;
+
+            unit.FormationRow = row;
+            state.EnemyUnits.Add(unit);
+        }
+
+        public int GetEnemyUnitRow(BattleUnit unit)
+        {
+            if (unit == null)
                 return -1;
 
-            for (var column = 0; column < MaxFormationSlots; column++)
+            return Mathf.Clamp(unit.FormationRow, 0, FormationRows - 1);
+        }
+
+        public List<BattleUnit> GetAliveEnemyUnitsInRow(int row)
+        {
+            var rowUnits = new List<BattleUnit>();
+            foreach (var unit in state.EnemyUnits)
             {
-                var slotIndex = GetSlotIndex(row, column);
-                if (state.EnemyUnits[slotIndex] == null)
-                    return slotIndex;
+                if (unit != null && !unit.IsDead && GetEnemyUnitRow(unit) == row)
+                    rowUnits.Add(unit);
             }
 
-            return -1;
+            return rowUnits;
         }
 
         public int CountPlayerUnits()
@@ -127,6 +142,9 @@ namespace UnifyCountry.Combat
         {
             if (units == null || row < 0 || row >= FormationRows)
                 return false;
+
+            if (ReferenceEquals(units, state.EnemyUnits))
+                return GetAliveEnemyUnitsInRow(row).Count > 0;
 
             for (var column = 0; column < MaxFormationSlots; column++)
             {
@@ -152,10 +170,9 @@ namespace UnifyCountry.Combat
 
         public BattleUnit GetEnemyFrontUnit(int row)
         {
-            for (var column = 0; column < MaxFormationSlots; column++)
+            foreach (var unit in state.EnemyUnits)
             {
-                var unit = state.EnemyUnits[GetSlotIndex(row, column)];
-                if (unit != null && !unit.IsDead)
+                if (unit != null && !unit.IsDead && GetEnemyUnitRow(unit) == row)
                     return unit;
             }
 
@@ -164,6 +181,9 @@ namespace UnifyCountry.Combat
 
         public List<FormationMove> AdvanceFormation(List<BattleUnit> units, bool playerSide)
         {
+            if (!playerSide)
+                return AdvanceEnemyFormation();
+
             var oldSlots = new Dictionary<int, int>();
             for (var i = 0; i < units.Count; i++)
             {
@@ -184,17 +204,9 @@ namespace UnifyCountry.Combat
                     units[GetSlotIndex(row, column)] = null;
                 }
 
-                if (playerSide)
-                {
-                    var startColumn = MaxFormationSlots - aliveUnits.Count;
-                    for (var i = 0; i < aliveUnits.Count; i++)
-                        units[GetSlotIndex(row, startColumn + i)] = aliveUnits[i];
-
-                    continue;
-                }
-
+                var startColumn = MaxFormationSlots - aliveUnits.Count;
                 for (var i = 0; i < aliveUnits.Count; i++)
-                    units[GetSlotIndex(row, i)] = aliveUnits[i];
+                    units[GetSlotIndex(row, startColumn + i)] = aliveUnits[i];
             }
 
             var moves = new List<FormationMove>();
@@ -206,6 +218,52 @@ namespace UnifyCountry.Combat
 
                 if (oldSlots.TryGetValue(unit.RuntimeId, out var fromSlot) && fromSlot != i)
                     moves.Add(new FormationMove(unit.RuntimeId, fromSlot, i, playerSide));
+            }
+
+            return moves;
+        }
+
+        private List<FormationMove> AdvanceEnemyFormation()
+        {
+            var oldSlots = new Dictionary<int, int>();
+            var oldColumnsByRow = new int[FormationRows];
+            foreach (var unit in state.EnemyUnits)
+            {
+                if (unit == null || unit.IsDead)
+                    continue;
+
+                var row = GetEnemyUnitRow(unit);
+                oldSlots[unit.RuntimeId] = EncodeEnemySlotIndex(row, oldColumnsByRow[row], oldColumnsByRow[row] + 1);
+                oldColumnsByRow[row]++;
+            }
+
+            var aliveRows = new List<BattleUnit>[FormationRows];
+            for (var row = 0; row < FormationRows; row++)
+                aliveRows[row] = new List<BattleUnit>();
+
+            foreach (var unit in state.EnemyUnits)
+            {
+                if (unit == null || unit.IsDead)
+                    continue;
+
+                var row = GetEnemyUnitRow(unit);
+                unit.FormationRow = row;
+                aliveRows[row].Add(unit);
+            }
+
+            state.EnemyUnits.Clear();
+            for (var row = 0; row < FormationRows; row++)
+                state.EnemyUnits.AddRange(aliveRows[row]);
+
+            var moves = new List<FormationMove>();
+            var newColumnsByRow = new int[FormationRows];
+            foreach (var unit in state.EnemyUnits)
+            {
+                var row = GetEnemyUnitRow(unit);
+                var toSlot = EncodeEnemySlotIndex(row, newColumnsByRow[row], aliveRows[row].Count);
+                newColumnsByRow[row]++;
+                if (oldSlots.TryGetValue(unit.RuntimeId, out var fromSlot) && fromSlot != toSlot)
+                    moves.Add(new FormationMove(unit.RuntimeId, fromSlot, toSlot, false));
             }
 
             return moves;
@@ -294,6 +352,34 @@ namespace UnifyCountry.Combat
             return Mathf.Clamp(slotIndex % MaxFormationSlots, 0, MaxFormationSlots - 1);
         }
 
+        public static int EncodeEnemySlotIndex(int row, int column)
+        {
+            return EncodeEnemySlotIndex(row, column, 0);
+        }
+
+        public static int EncodeEnemySlotIndex(int row, int column, int rowUnitCount)
+        {
+            var encodedRow = Mathf.Clamp(row, 0, FormationRows - 1);
+            var encodedColumn = Mathf.Max(0, column);
+            var encodedCount = Mathf.Max(0, rowUnitCount);
+            return encodedRow * EnemySlotStride + encodedCount * 100 + encodedColumn;
+        }
+
+        public static int GetEnemySlotRow(int slotIndex)
+        {
+            return Mathf.Clamp(slotIndex / EnemySlotStride, 0, FormationRows - 1);
+        }
+
+        public static int GetEnemySlotColumn(int slotIndex)
+        {
+            return Mathf.Max(0, slotIndex % 100);
+        }
+
+        public static int GetEnemySlotRowUnitCount(int slotIndex)
+        {
+            return Mathf.Max(0, slotIndex % EnemySlotStride / 100);
+        }
+
         private static int CountUnits(List<BattleUnit> units)
         {
             var count = 0;
@@ -357,7 +443,7 @@ namespace UnifyCountry.Combat
         private static bool RemoveDeadUnitsFromFormation(List<BattleUnit> units, List<string> logLines)
         {
             var removed = false;
-            for (var i = 0; i < units.Count; i++)
+            for (var i = units.Count - 1; i >= 0; i--)
             {
                 var unit = units[i];
                 if (unit == null || !unit.IsDead)

@@ -31,15 +31,11 @@ namespace UnifyCountry.Combat
             {
                 foreach (var cardId in wave.RowCardIds[row])
                 {
-                    var spawnSlot = formation.GetFirstEmptyEnemySlotInRow(row);
-                    if (spawnSlot < 0)
-                        break;
-
                     if (!state.CardMap.TryGetValue(cardId, out var card))
                         continue;
 
                     var unit = state.CreateUnit(card, CardCamp.Enemy);
-                    state.EnemyUnits[spawnSlot] = unit;
+                    formation.AddEnemyUnitToRow(unit, row);
                     spawnedUnits.Add(unit);
                     spawnedNames.Add($"{card.CardName}({BattleFormation.GetFormationRowName(row)})");
                 }
@@ -50,9 +46,7 @@ namespace UnifyCountry.Combat
 
             foreach (var unit in spawnedUnits)
             {
-                var slotIndex = BattleFormation.GetUnitSlotIndex(state.EnemyUnits, unit);
-                if (slotIndex >= 0)
-                    TriggerEffects(unit, "OnPlay", BattleFormation.GetSlotRow(slotIndex), null, logLines);
+                TriggerEffects(unit, "OnPlay", formation.GetEnemyUnitRow(unit), null, logLines);
             }
         }
 
@@ -60,9 +54,8 @@ namespace UnifyCountry.Combat
         {
             for (var row = 0; row < BattleFormation.FormationRows; row++)
             {
-                for (var column = 0; column < BattleFormation.MaxFormationSlots; column++)
+                foreach (var attacker in formation.GetAliveEnemyUnitsInRow(row))
                 {
-                    var attacker = state.EnemyUnits[BattleFormation.GetSlotIndex(row, column)];
                     if (attacker == null || attacker.IsDead)
                         continue;
 
@@ -277,6 +270,13 @@ namespace UnifyCountry.Combat
                 return targets;
 
             var units = target.PlayerSide ? state.PlayerUnits : state.EnemyUnits;
+            if (!target.PlayerSide)
+            {
+                foreach (var unit in formation.GetAliveEnemyUnitsInRow(target.Row))
+                    AddTarget(targets, unit);
+                return targets;
+            }
+
             for (var column = 0; column < BattleFormation.MaxFormationSlots; column++)
             {
                 var unit = units[BattleFormation.GetSlotIndex(target.Row, column)];
@@ -411,8 +411,19 @@ namespace UnifyCountry.Combat
                 targets.Add(target);
         }
 
-        private static void AddRowTargets(List<BattleUnit> targets, List<BattleUnit> units, int row, BattleUnit excluded = null)
+        private void AddRowTargets(List<BattleUnit> targets, List<BattleUnit> units, int row, BattleUnit excluded = null)
         {
+            if (ReferenceEquals(units, state.EnemyUnits))
+            {
+                foreach (var unit in formation.GetAliveEnemyUnitsInRow(row))
+                {
+                    if (unit != excluded)
+                        AddTarget(targets, unit);
+                }
+
+                return;
+            }
+
             for (var column = 0; column < BattleFormation.MaxFormationSlots; column++)
             {
                 var unit = units[BattleFormation.GetSlotIndex(row, column)];

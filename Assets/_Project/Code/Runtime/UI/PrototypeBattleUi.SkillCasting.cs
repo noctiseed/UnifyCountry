@@ -451,6 +451,17 @@ namespace UnifyCountry.UI
 
         private void CreateSkillRowTargetZone(Transform parent, int row, bool playerSide)
         {
+            if (!playerSide)
+            {
+                var enemyZone = CreateImage(parent, $"Skill Row Target R{row + 1}", Color.clear);
+                enemyZone.raycastTarget = true;
+                SetRect(enemyZone.rectTransform, GetEnemyRowAnchorMin(row) + new Vector2(-0.02f, -0.04f), GetEnemyRowAnchorMax(row) + new Vector2(0.02f, 0.04f), Vector2.zero, Vector2.zero);
+
+                var enemyHandler = enemyZone.gameObject.AddComponent<SkillTargetHandler>();
+                enemyHandler.Initialize(this, SkillTarget.ForRow(false, row));
+                return;
+            }
+
             var min = Vector2.one;
             var max = Vector2.zero;
             for (var column = 0; column < MaxFormationSlots; column++)
