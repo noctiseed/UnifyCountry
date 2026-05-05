@@ -16,9 +16,19 @@ namespace UnifyCountry.UI
             battleEffectResolver.ResolveEnemyAttack(logLines);
         }
 
+        private void ResolveEnemyUnitAttack(BattleUnit attacker, int row, List<string> logLines)
+        {
+            battleEffectResolver.ResolveEnemyUnitAttack(attacker, row, logLines);
+        }
+
         private void ResolvePlayerAttack(List<string> logLines)
         {
             battleEffectResolver.ResolvePlayerAttack(logLines);
+        }
+
+        private void ResolvePlayerUnitAttack(BattleUnit attacker, int row, List<string> logLines)
+        {
+            battleEffectResolver.ResolvePlayerUnitAttack(attacker, row, logLines);
         }
 
         private void TriggerEffects(BattleUnit source, string timing, int row, BattleUnit currentTarget, List<string> logLines)

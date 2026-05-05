@@ -34,7 +34,12 @@ namespace UnifyCountry.Combat
 
         public BattleUnit CreateUnit(CardRecord card)
         {
-            return new BattleUnit(card, NextUnitRuntimeId++);
+            return CreateUnit(card, card.Camp == CardCamp.Neutral ? CardCamp.Player : card.Camp);
+        }
+
+        public BattleUnit CreateUnit(CardRecord card, CardCamp camp)
+        {
+            return new BattleUnit(card, NextUnitRuntimeId++, camp);
         }
 
         public void ClearBattleCollections()

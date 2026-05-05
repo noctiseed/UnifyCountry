@@ -285,5 +285,42 @@ namespace UnifyCountry.UI
             var text = CreateText(frame.transform, $"{currentHp}/{maxHp}", 15, TextAnchor.MiddleCenter, Color.white);
             SetRect(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
         }
+
+        private void RefreshUnitHealthViews()
+        {
+            RefreshUnitHealthViews(playerUnits);
+            RefreshUnitHealthViews(enemyUnits);
+        }
+
+        private void RefreshUnitHealthViews(List<BattleUnit> units)
+        {
+            foreach (var unit in units)
+            {
+                if (unit == null || !unitViews.TryGetValue(unit.RuntimeId, out var rect) || rect == null)
+                    continue;
+
+                RefreshUnitHealthView(rect, unit);
+            }
+        }
+
+        private static void RefreshUnitHealthView(RectTransform unitRect, BattleUnit unit)
+        {
+            var healthBar = unitRect.Find("Health Bar");
+            if (healthBar == null)
+                return;
+
+            var fill = healthBar.Find("Health Fill") as RectTransform;
+            if (fill != null)
+            {
+                var hpRatio = unit.MaxHp <= 0 ? 0f : Mathf.Clamp01((float)unit.CurrentHp / unit.MaxHp);
+                fill.anchorMax = new Vector2(hpRatio, 1f);
+                fill.offsetMin = Vector2.zero;
+                fill.offsetMax = Vector2.zero;
+            }
+
+            var text = healthBar.GetComponentInChildren<Text>();
+            if (text != null)
+                text.text = $"{unit.CurrentHp}/{unit.MaxHp}";
+        }
     }
 }

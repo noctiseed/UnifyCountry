@@ -4,6 +4,7 @@ namespace UnifyCountry.Config
 {
     public enum CardCamp
     {
+        Neutral,
         Player,
         Enemy
     }

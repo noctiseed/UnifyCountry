@@ -14,16 +14,14 @@ namespace UnifyCountry.UI
 
         internal bool CanDragCard(CardRecord card)
         {
-            return card != null
-                && card.CardType == CardType.Unit
-                && card.Unit != null
+            return IsPlayableUnitCard(card)
                 && !isResolvingTurn
                 && currentEnergy >= card.Cost;
         }
 
         internal void PlayCardAt(CardRecord card, int insertIndex)
         {
-            if (card == null || card.Camp != CardCamp.Player || card.CardType != CardType.Unit || card.Unit == null)
+            if (!IsPlayableUnitCard(card))
                 return;
 
             if (isResolvingTurn)
@@ -55,7 +53,7 @@ namespace UnifyCountry.UI
                 return;
 
             currentEnergy -= card.Cost;
-            var unit = battleState.CreateUnit(card);
+            var unit = battleState.CreateUnit(card, CardCamp.Player);
             playerUnits[insertIndex] = unit;
 
             var logLines = new List<string> { $"{card.CardName} 上阵，消耗 {card.Cost} 点费用。" };
@@ -66,7 +64,7 @@ namespace UnifyCountry.UI
 
         internal void PlayCardInGap(CardRecord card, int gapIndex)
         {
-            if (card == null || card.Camp != CardCamp.Player || card.CardType != CardType.Unit || card.Unit == null)
+            if (!IsPlayableUnitCard(card))
                 return;
 
             if (isResolvingTurn)
@@ -89,7 +87,7 @@ namespace UnifyCountry.UI
             if (!hand.Remove(card))
                 return;
 
-            var unit = battleState.CreateUnit(card);
+            var unit = battleState.CreateUnit(card, CardCamp.Player);
             if (!TryInsertPlayerUnitAtGap(unit, gapIndex))
             {
                 hand.Add(card);
@@ -104,6 +102,14 @@ namespace UnifyCountry.UI
             TriggerEffects(unit, "OnPlay", slotIndex >= 0 ? GetSlotRow(slotIndex) : DecodeGapRow(gapIndex), null, logLines);
             CommitTurnLog(logLines);
             BuildUi();
+        }
+
+        private static bool IsPlayableUnitCard(CardRecord card)
+        {
+            return card != null
+                && card.CardType == CardType.Unit
+                && card.Unit != null
+                && (card.Camp == CardCamp.Player || card.UnitType == UnitType.Soldier);
         }
 
         private bool TryInsertPlayerUnitAtGap(BattleUnit unit, int gapIndex)

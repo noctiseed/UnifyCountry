@@ -1,7 +1,12 @@
 level_id,wave_id,turn_index,spawn_timing,row_1_card_ids,row_2_card_ids,row_3_card_ids,note_key
-LEVEL_001,WAVE_001,1,TurnStartNoAttack,,CARD_009,,level_001_wave_001_knife_soldier
-LEVEL_001,WAVE_002,2,TurnStartNoAttack,,CARD_010,,level_001_wave_002_cavalry
-LEVEL_001,WAVE_003,3,TurnStartNoAttack,,CARD_006,,level_001_wave_003_caocao
+LEVEL_001,WAVE_001,1,TurnStartNoAttack,,,CARD_009,level_001_wave_001_front_knife_soldier
+LEVEL_001,WAVE_002,2,TurnStartNoAttack,,,CARD_010,level_001_wave_002_front_cavalry
+LEVEL_001,WAVE_003,3,TurnStartNoAttack,,,CARD_007,level_001_wave_003_front_xiahoudun_boss
 LEVEL_002,WAVE_001,1,TurnStartNoAttack,,CARD_009,CARD_009,level_002_wave_001_two_knife_soldiers
 LEVEL_002,WAVE_002,2,TurnStartNoAttack,,CARD_010,CARD_010,level_002_wave_002_two_cavalry
-LEVEL_002,WAVE_003,3,TurnStartNoAttack,CARD_009,CARD_009|CARD_006,CARD_009,level_002_wave_003_knife_line_caocao
+LEVEL_002,WAVE_003,3,TurnStartNoAttack,CARD_009,CARD_009|CARD_008,CARD_009,level_002_wave_003_knife_line_caoren_boss
+LEVEL_003,WAVE_001,1,TurnStartNoAttack,,,CARD_004|CARD_009|CARD_005,level_003_wave_001_front_shield_knife_archer
+LEVEL_003,WAVE_002,2,TurnStartNoAttack,,CARD_004|CARD_010|CARD_005,,level_003_wave_002_middle_shield_cavalry_archer
+LEVEL_003,WAVE_003,3,TurnStartNoAttack,CARD_004|CARD_009|CARD_010|CARD_005,,,level_003_wave_003_back_shield_knife_cavalry_archer
+LEVEL_003,WAVE_004,4,TurnStartNoAttack,,,,level_003_wave_004_rest
+LEVEL_003,WAVE_005,5,TurnStartNoAttack,CARD_004|CARD_005,CARD_004|CARD_009|CARD_010|CARD_006,CARD_004|CARD_010,level_003_wave_005_three_line_caocao_boss

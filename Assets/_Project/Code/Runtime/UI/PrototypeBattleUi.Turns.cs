@@ -54,9 +54,7 @@ namespace UnifyCountry.UI
             logLines.Add($"第 {turnNumber} 回合行动结束，进入战斗结算。");
             DiscardHand(logLines);
 
-            ResolveEnemyAttack(logLines);
-            UpdateActiveTurnLog(logLines);
-            BuildUi();
+            yield return StartCoroutine(ResolveEnemyAttackRoutine(logLines));
             if (playerBaseHp <= 0)
             {
                 logLines.Add("大本营被攻破，战斗失败。");
@@ -69,13 +67,9 @@ namespace UnifyCountry.UI
 
             yield return new WaitForSeconds(0.75f);
 
-            ResolvePlayerAttack(logLines);
-            AppendDeathLogs(logLines);
-
-            yield return StartCoroutine(AdvanceFormationsRoutine(logLines));
+            yield return StartCoroutine(ResolvePlayerAttackRoutine(logLines));
             ResolveEndOfTurnBuffs(logLines);
             UpdateActiveTurnLog(logLines);
-            BuildUi();
 
             var waves = CurrentWaves;
             if (CountEnemyUnits() == 0 && (waves == null || nextWaveIndex >= waves.Count))
@@ -105,6 +99,73 @@ namespace UnifyCountry.UI
             var drawCount = DrawCardsWithCount(CardsDrawnPerTurn);
             logLines.Add($"进入第 {turnNumber} 回合：敌方单位进场后暂不攻击，费用恢复到 {MaxEnergy}，从抽牌堆抽 {drawCount} 张牌。");
             TriggerPlayerTurnStartEffects(logLines);
+        }
+
+        private IEnumerator ResolveEnemyAttackRoutine(List<string> logLines)
+        {
+            var attackers = CollectAttackers(enemyUnits, false);
+            foreach (var attacker in attackers)
+            {
+                if (attacker == null || attacker.IsDead)
+                    continue;
+
+                var slotIndex = GetUnitSlotIndex(enemyUnits, attacker);
+                if (slotIndex < 0)
+                    continue;
+
+                ResolveEnemyUnitAttack(attacker, GetSlotRow(slotIndex), logLines);
+                RefreshUnitHealthViews();
+                UpdateActiveTurnLog(logLines);
+                yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
+                if (playerBaseHp <= 0)
+                    yield break;
+            }
+        }
+
+        private IEnumerator ResolvePlayerAttackRoutine(List<string> logLines)
+        {
+            var attackers = CollectAttackers(playerUnits, true);
+            foreach (var attacker in attackers)
+            {
+                if (attacker == null || attacker.IsDead)
+                    continue;
+
+                var slotIndex = GetUnitSlotIndex(playerUnits, attacker);
+                if (slotIndex < 0)
+                    continue;
+
+                ResolvePlayerUnitAttack(attacker, GetSlotRow(slotIndex), logLines);
+                RefreshUnitHealthViews();
+                UpdateActiveTurnLog(logLines);
+                yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
+            }
+        }
+
+        private static List<BattleUnit> CollectAttackers(List<BattleUnit> units, bool playerSide)
+        {
+            var attackers = new List<BattleUnit>();
+            for (var row = 0; row < FormationRows; row++)
+            {
+                if (playerSide)
+                {
+                    for (var column = MaxFormationSlots - 1; column >= 0; column--)
+                        AddAttacker(units, attackers, row, column);
+                }
+                else
+                {
+                    for (var column = 0; column < MaxFormationSlots; column++)
+                        AddAttacker(units, attackers, row, column);
+                }
+            }
+
+            return attackers;
+        }
+
+        private static void AddAttacker(List<BattleUnit> units, List<BattleUnit> attackers, int row, int column)
+        {
+            var unit = units[GetSlotIndex(row, column)];
+            if (unit != null && !unit.IsDead)
+                attackers.Add(unit);
         }
 
         private void TriggerPlayerTurnStartEffects(List<string> logLines)

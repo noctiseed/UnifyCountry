@@ -38,7 +38,7 @@ namespace UnifyCountry.Combat
                     if (!state.CardMap.TryGetValue(cardId, out var card))
                         continue;
 
-                    var unit = state.CreateUnit(card);
+                    var unit = state.CreateUnit(card, CardCamp.Enemy);
                     state.EnemyUnits[spawnSlot] = unit;
                     spawnedUnits.Add(unit);
                     spawnedNames.Add($"{card.CardName}({BattleFormation.GetFormationRowName(row)})");
@@ -82,6 +82,22 @@ namespace UnifyCountry.Combat
             }
         }
 
+        public void ResolveEnemyUnitAttack(BattleUnit attacker, int row, List<string> logLines)
+        {
+            if (attacker == null || attacker.IsDead)
+                return;
+
+            var target = formation.GetPlayerFrontUnit(row);
+            if (target == null)
+            {
+                state.PlayerBaseHp = Mathf.Max(0, state.PlayerBaseHp - attacker.Attack);
+                logLines.Add($"{attacker.Name} 从{BattleFormation.GetFormationRowName(row)}攻击大本营，造成 {attacker.Attack} 点伤害。");
+                return;
+            }
+
+            ResolveUnitAttack(attacker, row, target, logLines, "攻击");
+        }
+
         public void ResolvePlayerAttack(List<string> logLines)
         {
             for (var row = 0; row < BattleFormation.FormationRows; row++)
@@ -99,6 +115,18 @@ namespace UnifyCountry.Combat
                     ResolveUnitAttack(attacker, row, target, logLines, "反击");
                 }
             }
+        }
+
+        public void ResolvePlayerUnitAttack(BattleUnit attacker, int row, List<string> logLines)
+        {
+            if (attacker == null || attacker.IsDead)
+                return;
+
+            var target = formation.GetEnemyFrontUnit(row);
+            if (target == null)
+                return;
+
+            ResolveUnitAttack(attacker, row, target, logLines, "反击");
         }
 
         public void TriggerPlayerTurnStartEffects(List<string> logLines)

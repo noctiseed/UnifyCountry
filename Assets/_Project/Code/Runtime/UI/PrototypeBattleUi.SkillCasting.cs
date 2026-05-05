@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnifyCountry.Combat;
 using UnifyCountry.Config;
@@ -381,9 +382,17 @@ namespace UnifyCountry.UI
 
             var logLines = new List<string> { $"释放「{card.CardName}」，消耗 {card.Cost} 点费用。" };
             ResolveSkillCardEffects(card, target, logLines);
-            RemoveDeadUnitsFromFormation(logLines);
+            RefreshUnitHealthViews();
+            StartCoroutine(FinishSkillCardRoutine(logLines));
+        }
+
+        private IEnumerator FinishSkillCardRoutine(List<string> logLines)
+        {
+            isResolvingTurn = true;
+            yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
             CancelSkillCast();
             CommitTurnLog(logLines);
+            isResolvingTurn = false;
             BuildUi();
         }
 

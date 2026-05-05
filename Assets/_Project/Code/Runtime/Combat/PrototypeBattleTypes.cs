@@ -45,10 +45,11 @@ namespace UnifyCountry.Combat
         private readonly List<BattleBuff> buffs = new List<BattleBuff>();
         private int maxHp;
 
-        public BattleUnit(CardRecord card, int runtimeId)
+        public BattleUnit(CardRecord card, int runtimeId, CardCamp camp)
         {
             this.card = card;
             RuntimeId = runtimeId;
+            Camp = camp;
             maxHp = card.Hp;
             CurrentHp = card.Hp;
             CurrentAttack = card.Attack;
@@ -60,7 +61,7 @@ namespace UnifyCountry.Combat
         public int Attack => CurrentAttack;
         public int BaseAttack => card.Attack;
         public int MaxHp => maxHp;
-        public CardCamp Camp => card.Camp;
+        public CardCamp Camp { get; }
         public IReadOnlyList<EffectRecord> Effects => card.Effects;
         public int CurrentAttack { get; private set; }
         public int CurrentHp { get; private set; }

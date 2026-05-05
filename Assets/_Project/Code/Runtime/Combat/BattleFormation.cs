@@ -363,7 +363,8 @@ namespace UnifyCountry.Combat
                 if (unit == null || !unit.IsDead)
                     continue;
 
-                logLines.Add($"{unit.Name} 阵亡，移出阵地。");
+                if (logLines != null)
+                    logLines.Add($"{unit.Name} 阵亡，移出阵地。");
                 units[i] = null;
                 removed = true;
             }
