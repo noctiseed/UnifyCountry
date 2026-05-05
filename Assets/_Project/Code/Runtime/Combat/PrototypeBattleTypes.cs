@@ -2,7 +2,7 @@ using UnifyCountry.Config;
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace UnifyCountry.UI
+namespace UnifyCountry.Combat
 {
     internal enum BattleBuffType
     {

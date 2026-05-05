@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnifyCountry.Combat;
 using UnifyCountry.Config;
 using UnityEngine;
 using UnityEngine.UI;
@@ -388,103 +389,25 @@ namespace UnifyCountry.UI
 
         private void ResolveSkillCardEffects(CardRecord card, SkillTarget target, List<string> logLines)
         {
-            if (card.Effects.Count == 0)
-            {
-                logLines.Add($"「{card.CardName}」已释放，但效果尚未实现。");
-                return;
-            }
-
-            foreach (var effect in card.Effects)
-            {
-                switch (effect.EffectType)
-                {
-                    case "DrawCards":
-                        var drawn = DrawCardsWithCount(effect.Value);
-                        logLines.Add($"「{card.CardName}」抽取 {drawn} 张牌。");
-                        break;
-                    case "Heal":
-                        foreach (var unit in ResolveSkillTargetUnits(target))
-                        {
-                            unit.Heal(effect.Value);
-                            logLines.Add($"「{card.CardName}」治疗 {unit.Name} {effect.Value} 点。");
-                        }
-                        break;
-                    case "HealAndGainRevival":
-                        foreach (var unit in ResolveSkillTargetUnits(target))
-                        {
-                            unit.Heal(effect.Value);
-                            unit.AddRevival(effect.SecondaryValue);
-                            logLines.Add($"「{card.CardName}」治疗 {unit.Name} {effect.Value} 点，并使其获得 {effect.SecondaryValue} 层复苏。");
-                        }
-                        break;
-                    case "BuffAttack":
-                        foreach (var unit in ResolveSkillTargetUnits(target))
-                        {
-                            unit.AddAttack(effect.Value);
-                            logLines.Add($"「{card.CardName}」使 {unit.Name} 攻击 +{effect.Value}。");
-                        }
-                        break;
-                    case "BuffAttackAndMaxHp":
-                        foreach (var unit in ResolveSkillTargetUnits(target))
-                        {
-                            unit.AddAttack(effect.Value);
-                            unit.AddMaxHp(effect.SecondaryValue, true);
-                            logLines.Add($"「{card.CardName}」使 {unit.Name} 攻击 +{effect.Value}，最大血量 +{effect.SecondaryValue}，并恢复 {effect.SecondaryValue} 点生命。");
-                        }
-                        break;
-                    case "GainShield":
-                        foreach (var unit in ResolveSkillTargetUnits(target))
-                        {
-                            unit.AddShield(effect.Value);
-                            logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.Value} 层护盾。");
-                        }
-                        break;
-                    case "Damage":
-                    case "BonusDamage":
-                        foreach (var unit in ResolveSkillTargetUnits(target))
-                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", false);
-                        break;
-                    case "DamageGainEnergyOnKill":
-                        foreach (var unit in ResolveSkillTargetUnits(target))
-                        {
-                            var wasAlive = unit != null && !unit.IsDead;
-                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", false);
-                            if (wasAlive && unit != null && unit.IsDead)
-                            {
-                                currentEnergy += effect.SecondaryValue;
-                                logLines.Add($"「{card.CardName}」击杀 {unit.Name}，获得 {effect.SecondaryValue} 点可使用费用。");
-                            }
-                        }
-                        break;
-                    default:
-                        logLines.Add($"「{card.CardName}」的效果类型 {effect.EffectType} 尚未实现。");
-                        break;
-                }
-            }
+            battleEffectResolver.ResolveSkillCardEffects(card, ToBattleTarget(target), logLines);
         }
 
         private List<BattleUnit> ResolveSkillTargetUnits(SkillTarget target)
         {
-            var targets = new List<BattleUnit>();
-            if (target.Kind == SkillTargetKind.Unit)
+            return battleEffectResolver.ResolveSkillTargetUnits(ToBattleTarget(target));
+        }
+
+        private static BattleTarget ToBattleTarget(SkillTarget target)
+        {
+            switch (target.Kind)
             {
-                if (IsAliveTargetUnit(target))
-                    targets.Add(target.Unit);
-                return targets;
+                case SkillTargetKind.Unit:
+                    return BattleTarget.ForUnit(target.PlayerSide, target.Row, target.Unit);
+                case SkillTargetKind.Row:
+                    return BattleTarget.ForRow(target.PlayerSide, target.Row);
+                default:
+                    return default;
             }
-
-            if (target.Kind != SkillTargetKind.Row)
-                return targets;
-
-            var units = target.PlayerSide ? playerUnits : enemyUnits;
-            for (var column = 0; column < MaxFormationSlots; column++)
-            {
-                var unit = units[GetSlotIndex(target.Row, column)];
-                if (unit != null && !unit.IsDead)
-                    targets.Add(unit);
-            }
-
-            return targets;
         }
 
         private static bool IsAliveTargetUnit(SkillTarget target)
@@ -492,19 +415,9 @@ namespace UnifyCountry.UI
             return target.Unit != null && !target.Unit.IsDead;
         }
 
-        private static bool HasAliveUnitsInRow(List<BattleUnit> units, int row)
+        private bool HasAliveUnitsInRow(List<BattleUnit> units, int row)
         {
-            if (units == null || row < 0 || row >= FormationRows)
-                return false;
-
-            for (var column = 0; column < MaxFormationSlots; column++)
-            {
-                var unit = units[GetSlotIndex(row, column)];
-                if (unit != null && !unit.IsDead)
-                    return true;
-            }
-
-            return false;
+            return battleFormation.HasAliveUnitsInRow(units, row);
         }
 
         private static bool IsSameSkillTarget(SkillTarget a, SkillTarget b)
