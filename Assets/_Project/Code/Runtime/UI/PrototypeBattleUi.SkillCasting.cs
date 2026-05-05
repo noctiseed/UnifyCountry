@@ -68,7 +68,7 @@ namespace UnifyCountry.UI
                 return;
             }
 
-            PlayCardAt(card, GetFirstEmptyPlayerSlot());
+            return;
         }
 
         private void BeginSkillCast(CardRecord card, RectTransform sourceRect)

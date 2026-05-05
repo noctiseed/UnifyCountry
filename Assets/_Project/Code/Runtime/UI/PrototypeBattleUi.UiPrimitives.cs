@@ -98,7 +98,7 @@ namespace UnifyCountry.UI
             var modalRect = modalRoot.GetComponent<RectTransform>();
             SetRect(modalRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            var dimmer = CreateImage(modalRoot.transform, "Dim Background", new Color(0.05f, 0.04f, 0.03f, 0.58f));
+            var dimmer = CreateImage(modalRoot.transform, "Dim Background", new Color(0f, 0f, 0f, 0.94f));
             SetRect(dimmer.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             var panel = CreateImage(modalRoot.transform, "Modal Panel", new Color(0.96f, 0.88f, 0.66f));

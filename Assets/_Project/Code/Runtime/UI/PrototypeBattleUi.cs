@@ -78,6 +78,7 @@ namespace UnifyCountry.UI
         private int currentEnergy = InitialPrepareEnergy;
         private int playerBaseHp = PlayerBaseMaxHp;
         private string battleLog = InitialBattleLog;
+        private Text battleLogText;
         private BattlePhase battlePhase = BattlePhase.InitialPrepare;
         private bool initialized;
         private bool isResolvingTurn;
@@ -98,6 +99,7 @@ namespace UnifyCountry.UI
             isResolvingTurn = false;
             battleEnded = false;
             initialized = false;
+            battleLogText = null;
             InitializeBattle();
             BuildUi();
         }
@@ -618,11 +620,13 @@ namespace UnifyCountry.UI
 
             battleLogHistory.Add(line);
             battleLog = ComposeBattleLog(null);
+            RefreshBattleLogText();
         }
 
         private void UpdateActiveTurnLog(List<string> activeLines)
         {
             battleLog = ComposeBattleLog(activeLines);
+            RefreshBattleLogText();
         }
 
         private void CommitTurnLog(List<string> activeLines)
@@ -631,6 +635,13 @@ namespace UnifyCountry.UI
                 battleLogHistory.AddRange(activeLines.Where(line => !string.IsNullOrWhiteSpace(line)));
 
             battleLog = ComposeBattleLog(null);
+            RefreshBattleLogText();
+        }
+
+        private void RefreshBattleLogText()
+        {
+            if (battleLogText != null)
+                battleLogText.text = battleLog;
         }
 
         private string ComposeBattleLog(List<string> activeLines)
@@ -1155,6 +1166,7 @@ namespace UnifyCountry.UI
             CancelSkillCast();
             ResetSkillTargetHandlers();
             RebuildCardPortraitMap();
+            battleLogText = null;
             ClearChildren();
             unitViews.Clear();
 
@@ -1254,6 +1266,7 @@ namespace UnifyCountry.UI
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Overflow;
             text.resizeTextForBestFit = false;
+            battleLogText = text;
 
             var fitter = contentObject.GetComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
