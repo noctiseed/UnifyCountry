@@ -60,7 +60,7 @@ namespace UnifyCountry.UI
             SetRect(energyPanel, new Vector2(0.17f, 0.03f), new Vector2(0.235f, 0.28f), Vector2.zero, Vector2.zero);
             energyCountText = GetInfoBlockValueText(energyPanel.transform);
 
-            var handPanel = CreatePanel(canvas.transform, "手牌", handPanelColor);
+            var handPanel = CreatePanel(canvas.transform, "手牌", handPanelColor, false);
             SetRect(handPanel, new Vector2(0.25f, 0.03f), new Vector2(0.635f, 0.28f), Vector2.zero, Vector2.zero);
             handContent = CreateContentRoot(handPanel.transform, "Hand Content");
             BuildHand(handContent);
