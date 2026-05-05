@@ -61,6 +61,8 @@ namespace UnifyCountry.UI
         private readonly List<string> battleLogHistory = new List<string>();
         private readonly Dictionary<int, RectTransform> unitViews = new Dictionary<int, RectTransform>();
         private readonly Dictionary<int, int> animatedSlotOverrides = new Dictionary<int, int>();
+        private readonly Dictionary<string, int> runDeckCounts = new Dictionary<string, int>();
+        private readonly List<CardRecord> settlementRewardOptions = new List<CardRecord>();
 
         private Dictionary<string, CardRecord> cardMap { get => battleState.CardMap; set => battleState.CardMap = value; }
         private List<BattleLevelRecord> levels { get => battleState.Levels; set => battleState.Levels = value; }
@@ -90,6 +92,17 @@ namespace UnifyCountry.UI
         private bool initialized;
         private bool isResolvingTurn;
         private bool battleEnded;
+        private bool battleWon;
+        private bool runDeckInitialized;
+        private bool rewardClaimed;
+        private int selectedRewardIndex = -1;
+        private SettlementStep settlementStep = SettlementStep.Result;
+
+        private enum SettlementStep
+        {
+            Result,
+            Reward
+        }
 
         [ContextMenu("Rebuild Preview UI")]
         public void Rebuild()
@@ -105,6 +118,11 @@ namespace UnifyCountry.UI
             StopAllCoroutines();
             isResolvingTurn = false;
             battleEnded = false;
+            battleWon = false;
+            rewardClaimed = false;
+            selectedRewardIndex = -1;
+            settlementRewardOptions.Clear();
+            settlementStep = SettlementStep.Result;
             initialized = false;
             battleLogText = null;
             InitializeBattle();
@@ -154,10 +172,11 @@ namespace UnifyCountry.UI
 
             battleState.NextUnitRuntimeId = 1;
             battleEnded = false;
+            battleWon = false;
             playerBaseHp = PlayerBaseMaxHp;
 
-            var startingDeck = PrototypeCsvDatabase.LoadStartingDeck(startingDeckCsv);
-            foreach (var entry in startingDeck)
+            EnsureRunDeckInitialized();
+            foreach (var entry in runDeckCounts)
             {
                 if (!cardMap.TryGetValue(entry.Key, out var card))
                     continue;
@@ -177,6 +196,19 @@ namespace UnifyCountry.UI
             DrawInitialHand();
             AddBattleLogEntry($"准备阶段：获得 {InitialPrepareEnergy} 点费用，英雄卡优先进入初始手牌，补足 {InitialHandSize} 张。");
             initialized = true;
+        }
+
+        private void EnsureRunDeckInitialized()
+        {
+            if (runDeckInitialized)
+                return;
+
+            runDeckCounts.Clear();
+            var startingDeck = PrototypeCsvDatabase.LoadStartingDeck(startingDeckCsv);
+            foreach (var entry in startingDeck)
+                runDeckCounts[entry.Key] = entry.Value;
+
+            runDeckInitialized = true;
         }
     }
 }

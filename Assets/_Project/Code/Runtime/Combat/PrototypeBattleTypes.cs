@@ -58,6 +58,7 @@ namespace UnifyCountry.Combat
         public int RuntimeId { get; }
         public string Name => card.CardName;
         public string UnitId => card.UnitId;
+        public UnitType UnitType => card.UnitType;
         public int Attack => CurrentAttack;
         public int BaseAttack => card.Attack;
         public int MaxHp => maxHp;

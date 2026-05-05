@@ -20,6 +20,7 @@ namespace UnifyCountry.UI
             button.onClick.AddListener(() => PlayCardFromHand(card, image.rectTransform));
             button.interactable = !isResolvingTurn && currentEnergy >= card.Cost;
             var canvasGroup = image.gameObject.AddComponent<CanvasGroup>();
+            image.gameObject.AddComponent<CardHoverAnimator>();
             var dragHandler = image.gameObject.AddComponent<CardDragHandler>();
             dragHandler.Initialize(this, card, image.rectTransform, canvasGroup);
 
@@ -57,7 +58,7 @@ namespace UnifyCountry.UI
                 SetRect(face.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             }
 
-            var statsText = card.CardType == CardType.Unit ? $"攻 {card.Attack}   血 {card.Hp}" : card.CardType.ToString();
+            var statsText = card.CardType == CardType.Unit ? $"攻 {card.Attack}   血 {card.Hp}" : GetCardTypeLabel(card.CardType);
             var stats = CreateText(image.transform, statsText, 20, TextAnchor.MiddleCenter, new Color(0.2f, 0.12f, 0.08f));
             SetRect(stats.rectTransform, new Vector2(0.05f, 0.1f), new Vector2(0.95f, 0.25f), Vector2.zero, Vector2.zero);
 
@@ -69,6 +70,25 @@ namespace UnifyCountry.UI
 
             CreateBorder(image.transform, new Color(0.22f, 0.16f, 0.1f), 3f);
             return image;
+        }
+
+        private static string GetCardTypeLabel(CardType cardType)
+        {
+            switch (cardType)
+            {
+                case CardType.Unit:
+                    return "单位卡";
+                case CardType.Skill:
+                    return "计谋卡";
+                case CardType.Equipment:
+                    return "装备卡";
+                case CardType.Power:
+                    return "能力卡";
+                case CardType.Event:
+                    return "事件卡";
+                default:
+                    return "卡牌";
+            }
         }
     }
 }

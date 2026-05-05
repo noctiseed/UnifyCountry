@@ -11,6 +11,7 @@ namespace UnifyCountry.UI
         private CardRecord card;
         private RectTransform rectTransform;
         private CanvasGroup canvasGroup;
+        private CardHoverAnimator hoverAnimator;
         private Vector2 startAnchoredPosition;
         private Transform startParent;
         private bool dropped;
@@ -24,6 +25,7 @@ namespace UnifyCountry.UI
             this.card = card;
             this.rectTransform = rectTransform;
             this.canvasGroup = canvasGroup;
+            hoverAnimator = GetComponent<CardHoverAnimator>();
         }
 
         public void MarkDropped()
@@ -40,6 +42,9 @@ namespace UnifyCountry.UI
             isDragging = true;
             dropped = false;
             startParent = rectTransform.parent;
+            if (hoverAnimator != null)
+                hoverAnimator.SetSuppressed(true);
+
             startAnchoredPosition = rectTransform.anchoredPosition;
             rectTransform.SetAsLastSibling();
             canvasGroup.blocksRaycasts = false;
@@ -68,6 +73,9 @@ namespace UnifyCountry.UI
                 canvasGroup.alpha = 1f;
             }
 
+            if (hoverAnimator != null)
+                hoverAnimator.SetSuppressed(false);
+
             if (dropped || rectTransform == null)
                 return;
 
@@ -75,6 +83,119 @@ namespace UnifyCountry.UI
                 rectTransform.SetParent(startParent, false);
 
             rectTransform.anchoredPosition = startAnchoredPosition;
+        }
+    }
+
+    public sealed class CardHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+    {
+        private const float HoverLift = 34f;
+        private const float HoverScale = 1.12f;
+        private const float AnimationSpeed = 14f;
+
+        private static CardHoverAnimator activeHover;
+
+        private RectTransform rectTransform;
+        private Vector2 baseAnchoredPosition;
+        private Vector3 baseScale;
+        private bool initialized;
+        private bool hovered;
+        private bool suppressed;
+
+        private void Awake()
+        {
+            rectTransform = GetComponent<RectTransform>();
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (suppressed)
+                return;
+
+            CaptureBaseTransform();
+            SetActiveHover(this);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            ClearActiveHover(this);
+        }
+
+        public void SetSuppressed(bool value)
+        {
+            suppressed = value;
+            ClearActiveHover(this);
+            hovered = false;
+            if (value)
+                SnapToBase();
+        }
+
+        private void Update()
+        {
+            if (rectTransform == null || suppressed)
+                return;
+
+            CaptureBaseTransform();
+
+            var targetPosition = hovered ? baseAnchoredPosition + new Vector2(0f, HoverLift) : baseAnchoredPosition;
+            var targetScale = hovered ? baseScale * HoverScale : baseScale;
+            var t = 1f - Mathf.Exp(-AnimationSpeed * Time.deltaTime);
+            rectTransform.anchoredPosition = Vector2.Lerp(rectTransform.anchoredPosition, targetPosition, t);
+            rectTransform.localScale = Vector3.Lerp(rectTransform.localScale, targetScale, t);
+
+            if (hovered)
+            {
+                transform.SetAsLastSibling();
+            }
+        }
+
+        private void CaptureBaseTransform()
+        {
+            if (initialized || rectTransform == null)
+                return;
+
+            baseAnchoredPosition = rectTransform.anchoredPosition;
+            baseScale = rectTransform.localScale;
+            initialized = true;
+        }
+
+        private static void SetActiveHover(CardHoverAnimator next)
+        {
+            if (activeHover == next)
+            {
+                next.hovered = true;
+                next.transform.SetAsLastSibling();
+                return;
+            }
+
+            if (activeHover != null)
+                activeHover.hovered = false;
+
+            activeHover = next;
+            activeHover.hovered = true;
+            activeHover.transform.SetAsLastSibling();
+        }
+
+        private static void ClearActiveHover(CardHoverAnimator target)
+        {
+            if (activeHover != target)
+                return;
+
+            target.hovered = false;
+            activeHover = null;
+        }
+
+        private void SnapToBase()
+        {
+            if (!initialized || rectTransform == null)
+                return;
+
+            rectTransform.anchoredPosition = baseAnchoredPosition;
+            rectTransform.localScale = baseScale;
+        }
+
+        private void OnDisable()
+        {
+            ClearActiveHover(this);
         }
     }
 

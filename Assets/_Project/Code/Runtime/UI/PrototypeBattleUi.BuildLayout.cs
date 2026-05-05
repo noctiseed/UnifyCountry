@@ -92,6 +92,9 @@ namespace UnifyCountry.UI
             SetRect(resetButton.GetComponent<RectTransform>(), new Vector2(battleEnded ? 0.87f : 0.88f, 0.035f), new Vector2(0.98f, 0.1f), Vector2.zero, Vector2.zero);
             resetButton.interactable = !isResolvingTurn;
             resetButton.onClick.AddListener(ResetBattle);
+
+            if (battleEnded)
+                BuildSettlementOverlay(canvas.transform);
         }
 
         private RectTransform CreateContentRoot(Transform parent, string name)

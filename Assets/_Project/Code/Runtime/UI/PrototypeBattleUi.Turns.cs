@@ -36,7 +36,6 @@ namespace UnifyCountry.UI
             var logLines = new List<string>();
             logLines.Add("准备阶段结束，敌方第一波即将进场。");
             DiscardHand(logLines);
-            DiscardUnplayedInitialHeroes(logLines);
 
             yield return StartCoroutine(AdvanceFormationsRoutine(logLines));
 
@@ -63,6 +62,7 @@ namespace UnifyCountry.UI
                 logLines.Add("大本营被攻破，战斗失败。");
                 CommitTurnLog(logLines);
                 battleEnded = true;
+                battleWon = false;
                 isResolvingTurn = false;
                 BuildUi();
                 yield break;
@@ -80,6 +80,7 @@ namespace UnifyCountry.UI
                 logLines.Add(HasNextLevel ? $"第 {currentLevelIndex + 1} 关胜利！" : "战斗胜利！");
                 CommitTurnLog(logLines);
                 battleEnded = true;
+                battleWon = true;
                 isResolvingTurn = false;
                 BuildUi();
                 yield break;
@@ -235,9 +236,5 @@ namespace UnifyCountry.UI
             battleDeck.DiscardHand(logLines);
         }
 
-        private void DiscardUnplayedInitialHeroes(List<string> logLines)
-        {
-            battleDeck.DiscardUnplayedInitialHeroes(logLines);
-        }
     }
 }

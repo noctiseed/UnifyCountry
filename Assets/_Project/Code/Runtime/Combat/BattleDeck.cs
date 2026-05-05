@@ -7,6 +7,8 @@ namespace UnifyCountry.Combat
 {
     internal sealed class BattleDeck
     {
+        public const int MaxHandSize = 10;
+
         private readonly BattleState state;
 
         public BattleDeck(BattleState state)
@@ -58,6 +60,9 @@ namespace UnifyCountry.Combat
 
         public bool DrawOneCard()
         {
+            if (state.Hand.Count >= MaxHandSize)
+                return false;
+
             if (state.DrawPile.Count == 0)
                 RefillDrawPileFromDiscard();
 
@@ -79,27 +84,6 @@ namespace UnifyCountry.Combat
             state.DiscardPile.AddRange(state.Hand);
             state.Hand.Clear();
             logLines.Add($"未使用的 {count} 张手牌进入弃牌堆。");
-        }
-
-        public void DiscardUnplayedInitialHeroes(List<string> logLines)
-        {
-            if (state.BattlePhase != BattlePhase.InitialPrepare)
-                return;
-
-            var heroes = state.DrawPile
-                .Where(card => card.CardType == CardType.Unit && card.UnitType == UnitType.Hero && card.Camp == CardCamp.Player)
-                .ToList();
-
-            if (heroes.Count == 0)
-                return;
-
-            foreach (var hero in heroes)
-            {
-                state.DrawPile.Remove(hero);
-                state.DiscardPile.Add(hero);
-            }
-
-            logLines.Add($"抽牌堆中剩余的 {heroes.Count} 张英雄卡进入弃牌堆。");
         }
 
         public void RefillDrawPileFromDiscard()

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnifyCountry.Combat;
 using UnifyCountry.Config;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,11 +10,26 @@ namespace UnifyCountry.UI
     {
         private void BuildHand(Transform parent)
         {
-            for (var i = 0; i < Mathf.Min(hand.Count, 5); i++)
+            var visibleCount = Mathf.Min(hand.Count, BattleDeck.MaxHandSize);
+            if (visibleCount <= 0)
+                return;
+
+            var cardWidth = visibleCount <= 5 ? 0.155f : 0.135f;
+            var step = visibleCount <= 1 ? 0f : Mathf.Lerp(0.13f, 0.092f, Mathf.InverseLerp(2f, BattleDeck.MaxHandSize, visibleCount));
+            var totalSpan = step * (visibleCount - 1);
+            var minX = 0.5f - (totalSpan + cardWidth) * 0.5f;
+            var center = (visibleCount - 1) * 0.5f;
+
+            for (var i = 0; i < visibleCount; i++)
             {
                 var card = hand[i];
                 var cardView = CreateCard(parent, card);
-                SetRect(cardView.GetComponent<RectTransform>(), new Vector2(0.025f + i * 0.19f, 0.12f), new Vector2(0.18f + i * 0.19f, 0.78f), Vector2.zero, Vector2.zero);
+                var rect = cardView.GetComponent<RectTransform>();
+                var normalizedDistance = visibleCount == 1 ? 0f : Mathf.Abs(i - center) / center;
+                var yOffset = Mathf.Lerp(0.08f, 0.17f, 1f - normalizedDistance);
+                var x = visibleCount == 1 ? 0.5f - cardWidth * 0.5f : minX + i * step;
+                SetRect(rect, new Vector2(x, yOffset), new Vector2(x + cardWidth, yOffset + 0.66f), Vector2.zero, Vector2.zero);
+                rect.localEulerAngles = new Vector3(0f, 0f, Mathf.Lerp(10f, -10f, visibleCount == 1 ? 0.5f : i / (float)(visibleCount - 1)));
             }
         }
 
