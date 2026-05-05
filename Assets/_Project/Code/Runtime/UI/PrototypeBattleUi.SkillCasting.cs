@@ -84,7 +84,7 @@ namespace UnifyCountry.UI
             if (currentEnergy < card.Cost)
             {
                 AddBattleLogEntry($"费用不足：{card.CardName} 需要 {card.Cost} 点费用。");
-                BuildUi();
+                RefreshHud();
                 return;
             }
 
@@ -393,7 +393,8 @@ namespace UnifyCountry.UI
             CancelSkillCast();
             CommitTurnLog(logLines);
             isResolvingTurn = false;
-            BuildUi();
+            RefreshTacticalViews();
+            RefreshHud();
         }
 
         private void ResolveSkillCardEffects(CardRecord card, SkillTarget target, List<string> logLines)

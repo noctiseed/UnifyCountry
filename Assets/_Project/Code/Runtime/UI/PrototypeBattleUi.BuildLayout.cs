@@ -13,7 +13,15 @@ namespace UnifyCountry.UI
             CancelSkillCast();
             ResetSkillTargetHandlers();
             RebuildCardPortraitMap();
+            statusText = null;
+            libraryCountText = null;
+            drawPileCountText = null;
+            energyCountText = null;
+            discardPileCountText = null;
             battleLogText = null;
+            playerBattleContent = null;
+            enemyBattleContent = null;
+            handContent = null;
             ClearChildren();
             unitViews.Clear();
 
@@ -27,33 +35,39 @@ namespace UnifyCountry.UI
             var turnLabel = battlePhase == BattlePhase.InitialPrepare ? "准备阶段" : $"第 {turnNumber} 回合";
             var status = CreateText(canvas.transform, $"第 {currentLevelIndex + 1} 关  |  {turnLabel}  |  下一波 {nextWaveLabel}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
             SetRect(status.rectTransform, new Vector2(0.18f, 0.91f), new Vector2(0.82f, 0.97f), Vector2.zero, Vector2.zero);
+            statusText = status;
 
             var playerPanel = CreatePanel(canvas.transform, "友方阵地", playerPanelColor, false);
             SetRect(playerPanel, new Vector2(0.02f, 0.31f), new Vector2(0.49f, 0.88f), Vector2.zero, Vector2.zero);
-            BuildPlayerBase(playerPanel.transform);
-            BuildBoard(playerPanel.transform, true, playerUnits);
+            playerBattleContent = CreateContentRoot(playerPanel.transform, "Player Battle Content");
+            BuildPlayerBattleContent();
 
             var enemyPanel = CreatePanel(canvas.transform, "敌方阵地", enemyPanelColor, false);
             SetRect(enemyPanel, new Vector2(0.51f, 0.31f), new Vector2(0.98f, 0.88f), Vector2.zero, Vector2.zero);
-            BuildBoard(enemyPanel.transform, false, enemyUnits);
-            BuildUpcomingWaveHint(enemyPanel.transform);
+            enemyBattleContent = CreateContentRoot(enemyPanel.transform, "Enemy Battle Content");
+            BuildEnemyBattleContent();
 
             var libraryPanel = CreateClickableInfoBlock(canvas.transform, "牌库", library.Count.ToString(), new Color(0.7f, 0.9f, 0.78f), () => ShowCardPileModal(canvas.transform, "牌库", library));
             SetRect(libraryPanel.GetComponent<RectTransform>(), new Vector2(0.02f, 0.03f), new Vector2(0.085f, 0.28f), Vector2.zero, Vector2.zero);
+            libraryCountText = GetInfoBlockValueText(libraryPanel.transform);
 
             var drawPilePanel = CreateClickableInfoBlock(canvas.transform, "抽牌堆", drawPile.Count.ToString(), new Color(0.72f, 0.84f, 0.95f), () => ShowCardPileModal(canvas.transform, "抽牌堆", drawPile));
             SetRect(drawPilePanel.GetComponent<RectTransform>(), new Vector2(0.095f, 0.03f), new Vector2(0.16f, 0.28f), Vector2.zero, Vector2.zero);
+            drawPileCountText = GetInfoBlockValueText(drawPilePanel.transform);
 
             var maxEnergyThisTurn = battlePhase == BattlePhase.InitialPrepare ? InitialPrepareEnergy : MaxEnergy;
             var energyPanel = CreateInfoBlock(canvas.transform, "费用", $"{currentEnergy}/{maxEnergyThisTurn}", new Color(0.98f, 0.8f, 0.38f));
             SetRect(energyPanel, new Vector2(0.17f, 0.03f), new Vector2(0.235f, 0.28f), Vector2.zero, Vector2.zero);
+            energyCountText = GetInfoBlockValueText(energyPanel.transform);
 
             var handPanel = CreatePanel(canvas.transform, "手牌", handPanelColor);
             SetRect(handPanel, new Vector2(0.25f, 0.03f), new Vector2(0.635f, 0.28f), Vector2.zero, Vector2.zero);
-            BuildHand(handPanel.transform);
+            handContent = CreateContentRoot(handPanel.transform, "Hand Content");
+            BuildHand(handContent);
 
             var discardPilePanel = CreateClickableInfoBlock(canvas.transform, "弃牌堆", discardPile.Count.ToString(), new Color(0.78f, 0.72f, 0.88f), () => ShowCardPileModal(canvas.transform, "弃牌堆", discardPile));
             SetRect(discardPilePanel.GetComponent<RectTransform>(), new Vector2(0.65f, 0.03f), new Vector2(0.715f, 0.28f), Vector2.zero, Vector2.zero);
+            discardPileCountText = GetInfoBlockValueText(discardPilePanel.transform);
 
             var logPanel = CreatePanel(canvas.transform, "战斗记录", new Color(0.93f, 0.84f, 0.64f));
             SetRect(logPanel, new Vector2(0.75f, 0.12f), new Vector2(0.98f, 0.28f), Vector2.zero, Vector2.zero);
@@ -78,6 +92,79 @@ namespace UnifyCountry.UI
             SetRect(resetButton.GetComponent<RectTransform>(), new Vector2(battleEnded ? 0.87f : 0.88f, 0.035f), new Vector2(0.98f, 0.1f), Vector2.zero, Vector2.zero);
             resetButton.interactable = !isResolvingTurn;
             resetButton.onClick.AddListener(ResetBattle);
+        }
+
+        private RectTransform CreateContentRoot(Transform parent, string name)
+        {
+            var contentObject = new GameObject(name, typeof(RectTransform));
+            contentObject.transform.SetParent(parent, false);
+            var rect = contentObject.GetComponent<RectTransform>();
+            SetRect(rect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            return rect;
+        }
+
+        private static Text GetInfoBlockValueText(Transform block)
+        {
+            var texts = block == null ? null : block.GetComponentsInChildren<Text>();
+            return texts == null || texts.Length == 0 ? null : texts[texts.Length - 1];
+        }
+
+        private void BuildPlayerBattleContent()
+        {
+            if (playerBattleContent == null)
+                return;
+
+            BuildPlayerBase(playerBattleContent);
+            BuildBoard(playerBattleContent, true, playerUnits);
+        }
+
+        private void BuildEnemyBattleContent()
+        {
+            if (enemyBattleContent == null)
+                return;
+
+            BuildBoard(enemyBattleContent, false, enemyUnits);
+            BuildUpcomingWaveHint(enemyBattleContent);
+        }
+
+        private void RefreshHud()
+        {
+            var waves = CurrentWaves;
+            var waveCount = waves == null ? 0 : waves.Count;
+            var nextWaveLabel = waveCount == 0 ? "0 / 0" : $"{Mathf.Min(nextWaveIndex + 1, waveCount)} / {waveCount}";
+            var turnLabel = battlePhase == BattlePhase.InitialPrepare ? "准备阶段" : $"第 {turnNumber} 回合";
+            if (statusText != null)
+                statusText.text = $"第 {currentLevelIndex + 1} 关  |  {turnLabel}  |  下一波 {nextWaveLabel}";
+
+            if (libraryCountText != null)
+                libraryCountText.text = library.Count.ToString();
+            if (drawPileCountText != null)
+                drawPileCountText.text = drawPile.Count.ToString();
+            if (discardPileCountText != null)
+                discardPileCountText.text = discardPile.Count.ToString();
+            if (energyCountText != null)
+            {
+                var maxEnergyThisTurn = battlePhase == BattlePhase.InitialPrepare ? InitialPrepareEnergy : MaxEnergy;
+                energyCountText.text = $"{currentEnergy}/{maxEnergyThisTurn}";
+            }
+
+            RefreshBattleLogText();
+        }
+
+        private void RefreshTacticalViews()
+        {
+            unitViews.Clear();
+            ResetSkillTargetHandlers();
+
+            ClearChildren(playerBattleContent);
+            BuildPlayerBattleContent();
+
+            ClearChildren(enemyBattleContent);
+            BuildEnemyBattleContent();
+
+            ClearChildren(handContent);
+            if (handContent != null)
+                BuildHand(handContent);
         }
 
         private void BuildBattleLog(Transform parent)

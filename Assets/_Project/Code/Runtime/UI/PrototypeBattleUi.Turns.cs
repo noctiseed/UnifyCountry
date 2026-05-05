@@ -43,7 +43,8 @@ namespace UnifyCountry.UI
             StartNextPlayerTurn(logLines);
             CommitTurnLog(logLines);
             isResolvingTurn = false;
-            BuildUi();
+            RefreshTacticalViews();
+            RefreshHud();
         }
 
         private IEnumerator ResolvePlayerTurnRoutine()
@@ -53,6 +54,8 @@ namespace UnifyCountry.UI
             var logLines = new List<string>();
             logLines.Add($"第 {turnNumber} 回合行动结束，进入战斗结算。");
             DiscardHand(logLines);
+            RefreshTacticalViews();
+            RefreshHud();
 
             yield return StartCoroutine(ResolveEnemyAttackRoutine(logLines));
             if (playerBaseHp <= 0)
@@ -85,7 +88,8 @@ namespace UnifyCountry.UI
             StartNextPlayerTurn(logLines);
             CommitTurnLog(logLines);
             isResolvingTurn = false;
-            BuildUi();
+            RefreshTacticalViews();
+            RefreshHud();
         }
 
         private void StartNextPlayerTurn(List<string> logLines)

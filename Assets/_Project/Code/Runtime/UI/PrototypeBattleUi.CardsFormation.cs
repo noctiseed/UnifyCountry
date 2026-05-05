@@ -30,14 +30,14 @@ namespace UnifyCountry.UI
             if (CountPlayerUnits() >= TotalFormationSlots)
             {
                 AddBattleLogEntry("友方阵地已满，无法继续上阵。");
-                BuildUi();
+                RefreshHud();
                 return;
             }
 
             if (currentEnergy < card.Cost)
             {
                 AddBattleLogEntry($"费用不足：{card.CardName} 需要 {card.Cost} 点费用。");
-                BuildUi();
+                RefreshHud();
                 return;
             }
 
@@ -45,7 +45,7 @@ namespace UnifyCountry.UI
             if (playerUnits[insertIndex] != null)
             {
                 AddBattleLogEntry("该阵地位置已有单位。");
-                BuildUi();
+                RefreshHud();
                 return;
             }
 
@@ -59,7 +59,8 @@ namespace UnifyCountry.UI
             var logLines = new List<string> { $"{card.CardName} 上阵，消耗 {card.Cost} 点费用。" };
             TriggerEffects(unit, "OnPlay", GetSlotRow(insertIndex), null, logLines);
             CommitTurnLog(logLines);
-            BuildUi();
+            RefreshTacticalViews();
+            RefreshHud();
         }
 
         internal void PlayCardInGap(CardRecord card, int gapIndex)
@@ -73,14 +74,14 @@ namespace UnifyCountry.UI
             if (CountPlayerUnits() >= TotalFormationSlots)
             {
                 AddBattleLogEntry("友方阵地已满，无法继续上阵。");
-                BuildUi();
+                RefreshHud();
                 return;
             }
 
             if (currentEnergy < card.Cost)
             {
                 AddBattleLogEntry($"费用不足：{card.CardName} 需要 {card.Cost} 点费用。");
-                BuildUi();
+                RefreshHud();
                 return;
             }
 
@@ -92,7 +93,7 @@ namespace UnifyCountry.UI
             {
                 hand.Add(card);
                 AddBattleLogEntry("当前军阵插入位置不可用。");
-                BuildUi();
+                RefreshHud();
                 return;
             }
 
@@ -101,7 +102,8 @@ namespace UnifyCountry.UI
             var logLines = new List<string> { $"{card.CardName} 插入阵地，消耗 {card.Cost} 点费用。" };
             TriggerEffects(unit, "OnPlay", slotIndex >= 0 ? GetSlotRow(slotIndex) : DecodeGapRow(gapIndex), null, logLines);
             CommitTurnLog(logLines);
-            BuildUi();
+            RefreshTacticalViews();
+            RefreshHud();
         }
 
         private static bool IsPlayableUnitCard(CardRecord card)

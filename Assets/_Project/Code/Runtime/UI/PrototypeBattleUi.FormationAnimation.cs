@@ -21,7 +21,8 @@ namespace UnifyCountry.UI
 
             yield return StartCoroutine(AnimateFormationMoves(moves));
 
-            BuildUi();
+            RefreshTacticalViews();
+            RefreshHud();
             yield return new WaitForSeconds(0.15f);
         }
 

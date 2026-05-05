@@ -78,7 +78,15 @@ namespace UnifyCountry.UI
         private BattlePhase battlePhase { get => battleState.BattlePhase; set => battleState.BattlePhase = value; }
 
         private string battleLog = InitialBattleLog;
+        private Text statusText;
+        private Text libraryCountText;
+        private Text drawPileCountText;
+        private Text energyCountText;
+        private Text discardPileCountText;
         private Text battleLogText;
+        private Transform playerBattleContent;
+        private Transform enemyBattleContent;
+        private Transform handContent;
         private bool initialized;
         private bool isResolvingTurn;
         private bool battleEnded;
