@@ -88,10 +88,7 @@ namespace UnifyCountry.UI
 
         private static bool ShouldMirrorEnemyUnitSprite(BattleUnit unit)
         {
-            if (unit == null || unit.Camp != CardCamp.Enemy)
-                return false;
-
-            return unit.UnitId == "UNIT_004" || unit.UnitId == "UNIT_005";
+            return unit != null && unit.Camp == CardCamp.Enemy;
         }
 
         private UnitSpriteImage CreateUnitSpriteImage(Transform parent, bool mirrorX)
