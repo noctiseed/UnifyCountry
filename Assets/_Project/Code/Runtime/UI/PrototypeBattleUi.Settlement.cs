@@ -160,7 +160,10 @@ namespace UnifyCountry.UI
                 return;
 
             var heroOptions = cardMap.Values
-                .Where(card => card.CardType == CardType.Unit && card.UnitType == UnitType.Hero && card.Camp == CardCamp.Player)
+                .Where(card => card.CardId != LordCardId
+                    && card.CardType == CardType.Unit
+                    && card.UnitType == UnitType.Hero
+                    && card.Camp == CardCamp.Player)
                 .ToList();
             Shuffle(heroOptions);
 
@@ -179,7 +182,9 @@ namespace UnifyCountry.UI
                 return;
 
             var fallbackOptions = cardMap.Values
-                .Where(card => card.Camp == CardCamp.Player && !settlementRewardOptions.Contains(card))
+                .Where(card => card.CardId != LordCardId
+                    && card.Camp == CardCamp.Player
+                    && !settlementRewardOptions.Contains(card))
                 .ToList();
             Shuffle(fallbackOptions);
 
@@ -193,6 +198,9 @@ namespace UnifyCountry.UI
                 return;
 
             var card = settlementRewardOptions[selectedRewardIndex];
+            if (card.CardId == LordCardId)
+                return;
+
             if (runDeckCounts.ContainsKey(card.CardId))
                 runDeckCounts[card.CardId]++;
             else

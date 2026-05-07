@@ -50,6 +50,7 @@ namespace UnifyCountry.UI
         private const int InitialHandSize = 5;
         private const int CardsDrawnPerTurn = 3;
         private const int PlayerBaseMaxHp = 10;
+        private const string LordCardId = "CARD_001";
         private const float FormationMoveDuration = 0.45f;
         private const string InitialBattleLog = "拖动手牌到友方阵地上阵，然后点击结束回合。";
 
@@ -208,6 +209,7 @@ namespace UnifyCountry.UI
             foreach (var entry in startingDeck)
                 runDeckCounts[entry.Key] = entry.Value;
 
+            runDeckCounts[LordCardId] = 1;
             runDeckInitialized = true;
         }
     }

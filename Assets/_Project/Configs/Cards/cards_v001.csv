@@ -1,7 +1,7 @@
 card_id,card_name,card_type,cost,camp,faction,rarity,max_copies_in_deck,art_id,effect_id,description_key
 CARD_001,刘备,Unit,1,Player,Shu,Rare,1,CARD_001,,player_hero
-CARD_002,关羽,Unit,2,Player,Shu,Rare,1,CARD_002,,player_hero
-CARD_003,张飞,Unit,2,Player,Shu,Rare,1,CARD_003,,player_hero
+CARD_002,关羽,Unit,2,Player,Shu,Rare,99,CARD_002,,player_hero
+CARD_003,张飞,Unit,2,Player,Shu,Rare,99,CARD_003,,player_hero
 CARD_004,盾牌兵,Unit,1,Neutral,Shu,Common,99,CARD_004,,neutral_soldier
 CARD_005,弓箭手,Unit,1,Neutral,Shu,Common,99,CARD_005,,neutral_soldier
 CARD_006,曹操,Unit,2,Enemy,Wei,Rare,1,CARD_006,,enemy_hero
@@ -9,9 +9,9 @@ CARD_007,夏侯惇,Unit,2,Enemy,Wei,Rare,1,CARD_007,,enemy_hero
 CARD_008,曹仁,Unit,2,Enemy,Wei,Rare,1,CARD_008,,enemy_hero
 CARD_009,刀兵,Unit,1,Neutral,Wei,Common,99,CARD_009,,neutral_soldier
 CARD_010,骑兵,Unit,1,Neutral,Wei,Common,99,CARD_010,,neutral_soldier
-CARD_011,赵云,Unit,2,Player,Shu,Rare,1,CARD_011,,player_hero
-CARD_012,马超,Unit,2,Player,Shu,Rare,1,CARD_012,,player_hero
-CARD_013,简雍,Unit,1,Player,Shu,Rare,1,CARD_013,,player_hero
+CARD_011,赵云,Unit,2,Player,Shu,Rare,99,CARD_011,,player_hero
+CARD_012,马超,Unit,2,Player,Shu,Rare,99,CARD_012,,player_hero
+CARD_013,简雍,Unit,1,Player,Shu,Rare,99,CARD_013,,player_hero
 PLAN_001,滚石,Skill,1,Player,Neutral,Common,99,PLAN_001,EFFECT_PLAN_001,plan_rockfall
 PLAN_002,齐射,Skill,1,Player,Neutral,Common,99,PLAN_002,EFFECT_PLAN_002,plan_volley
 PLAN_003,疗伤,Skill,1,Player,Neutral,Common,99,PLAN_003,EFFECT_PLAN_003,plan_heal
