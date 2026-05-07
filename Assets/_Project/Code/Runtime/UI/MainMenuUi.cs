@@ -6,6 +6,7 @@ using UnityEngine.UI;
 
 namespace UnifyCountry.UI
 {
+    [ExecuteAlways]
     public sealed class MainMenuUi : MonoBehaviour
     {
         private const string BattleSceneName = "SCN_BattlePrototype";
@@ -24,7 +25,14 @@ namespace UnifyCountry.UI
 
         private void Awake()
         {
-            Build();
+            if (Application.isPlaying)
+                Build();
+        }
+
+        private void OnEnable()
+        {
+            if (!Application.isPlaying)
+                Build();
         }
 
         [ContextMenu("Rebuild Main Menu")]

@@ -21,7 +21,7 @@ namespace UnifyCountry.UI
 
             if (hasSprite)
             {
-                var spriteImage = CreateImage(root.transform, "Unit Sprite", Color.white);
+                var spriteImage = CreateUnitSpriteImage(root.transform, ShouldMirrorEnemyUnitSprite(unit));
                 spriteImage.sprite = unitSprite;
                 spriteImage.preserveAspect = true;
                 SetRect(spriteImage.rectTransform, new Vector2(-0.12f, 0.08f), new Vector2(1.12f, 1.14f), Vector2.zero, Vector2.zero);
@@ -84,6 +84,25 @@ namespace UnifyCountry.UI
             var deltaText = attackDelta == 0 ? string.Empty : attackDelta > 0 ? $"（基础 {unit.BaseAttack}，+{attackDelta}）" : $"（基础 {unit.BaseAttack}，{attackDelta}）";
             var tooltip = icon.gameObject.AddComponent<PrototypeTooltipHandler>();
             tooltip.Initialize($"攻击力 {unit.Attack}{deltaText}", uiFont);
+        }
+
+        private static bool ShouldMirrorEnemyUnitSprite(BattleUnit unit)
+        {
+            if (unit == null || unit.Camp != CardCamp.Enemy)
+                return false;
+
+            return unit.UnitId == "UNIT_004" || unit.UnitId == "UNIT_005";
+        }
+
+        private UnitSpriteImage CreateUnitSpriteImage(Transform parent, bool mirrorX)
+        {
+            var gameObject = new GameObject("Unit Sprite", typeof(RectTransform), typeof(UnitSpriteImage));
+            gameObject.transform.SetParent(parent, false);
+
+            var image = gameObject.GetComponent<UnitSpriteImage>();
+            image.color = Color.white;
+            image.MirrorX = mirrorX;
+            return image;
         }
 
         private void CreateUnitDefenseBuffIcons(Transform parent, BattleUnit unit, bool hasSprite)
@@ -321,6 +340,27 @@ namespace UnifyCountry.UI
             var text = healthBar.GetComponentInChildren<Text>();
             if (text != null)
                 text.text = $"{unit.CurrentHp}/{unit.MaxHp}";
+        }
+    }
+
+    internal sealed class UnitSpriteImage : Image
+    {
+        public bool MirrorX { get; set; }
+
+        protected override void OnPopulateMesh(VertexHelper toFill)
+        {
+            base.OnPopulateMesh(toFill);
+            if (!MirrorX)
+                return;
+
+            var centerX = rectTransform.rect.center.x;
+            var vertex = new UIVertex();
+            for (var i = 0; i < toFill.currentVertCount; i++)
+            {
+                toFill.PopulateUIVertex(ref vertex, i);
+                vertex.position.x = centerX * 2f - vertex.position.x;
+                toFill.SetUIVertex(vertex, i);
+            }
         }
     }
 }
