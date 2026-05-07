@@ -33,10 +33,20 @@ namespace UnifyCountry.UI
 
         private void Update()
         {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (IsCastingSkill)
+                    CancelSkillCast();
+                else
+                    ToggleGameMenuFromKeyboard();
+
+                return;
+            }
+
             if (!IsCastingSkill)
                 return;
 
-            if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
+            if (Input.GetMouseButtonDown(1))
             {
                 CancelSkillCast();
                 return;
