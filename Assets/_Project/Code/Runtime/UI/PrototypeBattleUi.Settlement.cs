@@ -215,6 +215,7 @@ namespace UnifyCountry.UI
             currentLevelIndex = 0;
             runDeckInitialized = false;
             runDeckCounts.Clear();
+            battleLogHistory.Clear();
             ResetBattle();
         }
     }

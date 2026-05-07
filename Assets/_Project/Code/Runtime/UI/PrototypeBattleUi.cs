@@ -168,7 +168,6 @@ namespace UnifyCountry.UI
             currentLevelIndex = Mathf.Clamp(currentLevelIndex, 0, Mathf.Max(0, levels.Count - 1));
 
             battleState.ClearBattleCollections();
-            battleLogHistory.Clear();
             battleState.EnsureFormationSlots();
 
             battleState.NextUnitRuntimeId = 1;

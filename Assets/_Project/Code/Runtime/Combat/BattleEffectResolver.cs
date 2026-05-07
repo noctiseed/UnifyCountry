@@ -207,13 +207,13 @@ namespace UnifyCountry.Combat
                     case "Damage":
                     case "BonusDamage":
                         foreach (var unit in ResolveSkillTargetUnits(target))
-                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", false);
+                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", true);
                         break;
                     case "DamageGainEnergyOnKill":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                         {
                             var wasAlive = unit != null && !unit.IsDead;
-                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", false);
+                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", true);
                             if (wasAlive && unit != null && unit.IsDead)
                             {
                                 state.CurrentEnergy += effect.SecondaryValue;
@@ -353,7 +353,7 @@ namespace UnifyCountry.Combat
                 case "BonusDamage":
                 case "Damage":
                     foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
-                        DealDamage(source, target, effect.Value, row, logLines, $"{source.Name} 触发「{effect.EffectName}」命中 {target.Name}", false);
+                        DealDamage(source, target, effect.Value, row, logLines, $"{source.Name} 触发「{effect.EffectName}」命中 {target.Name}", true);
                     break;
             }
         }
