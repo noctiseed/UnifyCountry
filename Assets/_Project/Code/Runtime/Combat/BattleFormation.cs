@@ -431,12 +431,22 @@ namespace UnifyCountry.Combat
             for (var i = 0; i < units.Count; i++)
             {
                 var unit = units[i];
-                if (unit == null || unit.IsDead || unit.Revival <= 0)
+                if (unit == null || unit.IsDead)
                     continue;
 
-                var revivalBefore = unit.Revival;
-                var healed = unit.ResolveRevival();
-                logLines.Add($"{unit.Name} 触发复苏 {revivalBefore}，恢复 {healed} 点生命，复苏降为 {unit.Revival}。");
+                if (unit.Revival > 0)
+                {
+                    var revivalBefore = unit.Revival;
+                    var healed = unit.ResolveRevival();
+                    logLines.Add($"{unit.Name} 触发复苏 {revivalBefore}，恢复 {healed} 点生命，复苏降为 {unit.Revival}。");
+                }
+
+                if (unit.Burn > 0 && !unit.IsDead)
+                {
+                    var burnBefore = unit.Burn;
+                    var damage = unit.ResolveBurn();
+                    logLines.Add($"{unit.Name} 触发灼烧 {burnBefore}，受到 {damage} 点伤害，灼烧降为 {unit.Burn}。");
+                }
             }
         }
 

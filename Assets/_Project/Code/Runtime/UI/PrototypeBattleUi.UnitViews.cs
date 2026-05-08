@@ -127,7 +127,7 @@ namespace UnifyCountry.UI
             {
                 CreateUnitBuffIcon(
                     parent,
-                    iconIndex,
+                    iconIndex++,
                     hasSprite ? new Color(0.17f, 0.12f, 0.34f, 0.86f) : new Color(0.32f, 0.2f, 0.58f, 0.92f),
                     CreateImmunityIconShape,
                     true,
@@ -139,7 +139,7 @@ namespace UnifyCountry.UI
                 var hasRegenerationSprite = TryGetRegenerationIconSprite(out var regenerationSprite);
                 CreateUnitBuffIcon(
                     parent,
-                    iconIndex,
+                    iconIndex++,
                     hasRegenerationSprite ? Color.clear : hasSprite ? new Color(0.08f, 0.34f, 0.16f, 0.86f) : new Color(0.1f, 0.5f, 0.22f, 0.92f),
                     iconParent =>
                     {
@@ -149,7 +149,18 @@ namespace UnifyCountry.UI
                             CreateBuffTextIcon(iconParent, "复", new Color(0.78f, 1f, 0.72f));
                     },
                     !hasRegenerationSprite,
-                    $"复苏 {unit.Revival}：回合最后结算时恢复等同于当前复苏层数的生命，然后复苏 -1");
+                    $"复苏 {unit.Revival}：回合结束时恢复等同于当前复苏层数的生命，然后复苏 -1");
+            }
+
+            if (unit.Burn > 0)
+            {
+                CreateUnitBuffIcon(
+                    parent,
+                    iconIndex++,
+                    hasSprite ? new Color(0.46f, 0.08f, 0.02f, 0.88f) : new Color(0.74f, 0.16f, 0.04f, 0.94f),
+                    iconParent => CreateBuffTextIcon(iconParent, "灼", new Color(1f, 0.82f, 0.42f)),
+                    true,
+                    $"灼烧 {unit.Burn}：回合结束时受到等同于当前灼烧层数的伤害，然后灼烧 -1");
             }
         }
 
@@ -157,7 +168,8 @@ namespace UnifyCountry.UI
         {
             return (unit.Shield > 0 ? 1 : 0)
                 + (unit.AttackImmunityCharges > 0 ? 1 : 0)
-                + (unit.Revival > 0 ? 1 : 0);
+                + (unit.Revival > 0 ? 1 : 0)
+                + (unit.Burn > 0 ? 1 : 0);
         }
 
         private void CreateUnitBuffIcon(Transform parent, int iconIndex, Color backgroundColor, System.Action<Transform> createShape, bool useBackgroundFrame, string tooltipText)
@@ -279,6 +291,9 @@ namespace UnifyCountry.UI
                 if (effect.Timing == "BeforeDamaged" && effect.EffectType == "DamageCap")
                     statuses.Add($"限{effect.Value}");
             }
+
+            if (unit.Burn > 0)
+                statuses.Add($"灼{unit.Burn}");
 
             return string.Join("  ", statuses);
         }

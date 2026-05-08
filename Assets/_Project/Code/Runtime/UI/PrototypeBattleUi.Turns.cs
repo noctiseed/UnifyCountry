@@ -78,6 +78,12 @@ namespace UnifyCountry.UI
                 yield break;
 
             ResolveEndOfTurnBuffs(logLines);
+            RefreshUnitHealthViews();
+            UpdateActiveTurnLog(logLines);
+            yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
+            if (TryFinishBattleAfterBossDefeat(logLines))
+                yield break;
+
             UpdateActiveTurnLog(logLines);
 
             var waves = CurrentWaves;

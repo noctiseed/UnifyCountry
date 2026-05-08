@@ -206,6 +206,13 @@ namespace UnifyCountry.Combat
                             logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.Value} 层护盾。");
                         }
                         break;
+                    case "GainBurn":
+                        foreach (var unit in ResolveSkillTargetUnits(target))
+                        {
+                            unit.AddBurn(effect.Value);
+                            logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.Value} 层灼烧。");
+                        }
+                        break;
                     case "Damage":
                     case "BonusDamage":
                         foreach (var unit in ResolveSkillTargetUnits(target))
@@ -346,6 +353,13 @@ namespace UnifyCountry.Combat
                     {
                         target.AddShield(effect.Value);
                         logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 层护盾。");
+                    }
+                    break;
+                case "GainBurn":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        target.AddBurn(effect.Value);
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 层灼烧。");
                     }
                     break;
                 case "DrawCards":
