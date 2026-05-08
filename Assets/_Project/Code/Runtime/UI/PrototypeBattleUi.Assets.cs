@@ -104,5 +104,23 @@ namespace UnifyCountry.UI
             return false;
 #endif
         }
+
+        private bool TryGetBurnIconSprite(out Sprite sprite)
+        {
+            if (burnIconSprite != null)
+            {
+                sprite = burnIconSprite;
+                return true;
+            }
+
+#if UNITY_EDITOR
+            sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/_Project/Art/UI/Icons/icon_burn.png");
+            return sprite != null;
+#else
+            sprite = null;
+            return false;
+#endif
+        }
     }
 }

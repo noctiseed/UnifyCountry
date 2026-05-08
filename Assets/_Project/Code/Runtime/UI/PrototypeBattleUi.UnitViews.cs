@@ -154,12 +154,19 @@ namespace UnifyCountry.UI
 
             if (unit.Burn > 0)
             {
+                var hasBurnSprite = TryGetBurnIconSprite(out var burnSprite);
                 CreateUnitBuffIcon(
                     parent,
                     iconIndex++,
-                    hasSprite ? new Color(0.46f, 0.08f, 0.02f, 0.88f) : new Color(0.74f, 0.16f, 0.04f, 0.94f),
-                    iconParent => CreateBuffTextIcon(iconParent, "灼", new Color(1f, 0.82f, 0.42f)),
-                    true,
+                    hasBurnSprite ? Color.clear : hasSprite ? new Color(0.46f, 0.08f, 0.02f, 0.88f) : new Color(0.74f, 0.16f, 0.04f, 0.94f),
+                    iconParent =>
+                    {
+                        if (hasBurnSprite)
+                            CreateBuffIconSprite(iconParent, burnSprite);
+                        else
+                            CreateBuffTextIcon(iconParent, "灼", new Color(1f, 0.82f, 0.42f));
+                    },
+                    !hasBurnSprite,
                     $"灼烧 {unit.Burn}：回合结束时受到等同于当前灼烧层数的伤害，然后灼烧 -1");
             }
         }

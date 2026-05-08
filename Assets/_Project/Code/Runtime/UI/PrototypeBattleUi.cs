@@ -33,6 +33,7 @@ namespace UnifyCountry.UI
         [SerializeField] private Sprite attackIconSprite;
         [SerializeField] private Sprite shieldIconSprite;
         [SerializeField] private Sprite regenerationIconSprite;
+        [SerializeField] private Sprite burnIconSprite;
 
         private readonly Color backgroundColor = new Color(0.94f, 0.89f, 0.73f);
         private readonly Color playerPanelColor = new Color(0.76f, 0.92f, 0.67f);
