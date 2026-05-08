@@ -17,10 +17,10 @@ namespace UnifyCountry.Combat
             this.formation = formation;
         }
 
-        public void SpawnCurrentWave(List<WaveSpawnRecord> waves, List<string> logLines)
+        public List<BattleUnit> SpawnCurrentWave(List<WaveSpawnRecord> waves, List<string> logLines)
         {
             if (waves == null || state.NextWaveIndex >= waves.Count)
-                return;
+                return new List<BattleUnit>();
 
             var wave = waves[state.NextWaveIndex];
             state.NextWaveIndex++;
@@ -48,6 +48,8 @@ namespace UnifyCountry.Combat
             {
                 TriggerEffects(unit, "OnPlay", formation.GetEnemyUnitRow(unit), null, logLines);
             }
+
+            return spawnedUnits;
         }
 
         public void ResolveEnemyAttack(List<string> logLines)

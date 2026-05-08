@@ -68,9 +68,15 @@ namespace UnifyCountry.UI
                 yield break;
             }
 
+            if (TryFinishBattleAfterBossDefeat(logLines))
+                yield break;
+
             yield return new WaitForSeconds(0.75f);
 
             yield return StartCoroutine(ResolvePlayerAttackRoutine(logLines));
+            if (TryFinishBattleAfterBossDefeat(logLines))
+                yield break;
+
             ResolveEndOfTurnBuffs(logLines);
             UpdateActiveTurnLog(logLines);
 
@@ -120,6 +126,8 @@ namespace UnifyCountry.UI
                 yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
                 if (playerBaseHp <= 0)
                     yield break;
+                if (activeBossDefeated)
+                    yield break;
             }
         }
 
@@ -139,7 +147,24 @@ namespace UnifyCountry.UI
                 RefreshUnitHealthViews();
                 UpdateActiveTurnLog(logLines);
                 yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
+                if (activeBossDefeated)
+                    yield break;
             }
+        }
+
+        private bool TryFinishBattleAfterBossDefeat(List<string> logLines)
+        {
+            if (!activeBossDefeated)
+                return false;
+
+            logLines.Add(HasNextLevel ? $"第 {currentLevelIndex + 1} 关 Boss 阵亡，胜利！" : "Boss 阵亡，战斗胜利！");
+            CommitTurnLog(logLines);
+            battleEnded = true;
+            battleWon = true;
+            activeBossRuntimeId = -1;
+            isResolvingTurn = false;
+            BuildUi();
+            return true;
         }
 
         private List<BattleUnit> CollectAttackers(List<BattleUnit> units, bool playerSide)

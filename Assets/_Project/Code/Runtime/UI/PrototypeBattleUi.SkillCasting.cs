@@ -401,6 +401,9 @@ namespace UnifyCountry.UI
             isResolvingTurn = true;
             yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
             CancelSkillCast();
+            if (TryFinishBattleAfterBossDefeat(logLines))
+                yield break;
+
             CommitTurnLog(logLines);
             isResolvingTurn = false;
             RefreshTacticalViews();

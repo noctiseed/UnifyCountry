@@ -33,6 +33,7 @@ namespace UnifyCountry.UI
                 yield break;
 
             AppendDeathLogs(logLines);
+            CaptureBossDefeat();
             UpdateActiveTurnLog(logLines);
             yield return StartCoroutine(AnimateDeathUnits(deadRuntimeIds));
 
@@ -165,6 +166,21 @@ namespace UnifyCountry.UI
         private bool RemoveDeadUnitsFromFormation(List<string> logLines)
         {
             return battleFormation.RemoveDeadUnitsFromFormation(logLines);
+        }
+
+        private void CaptureBossDefeat()
+        {
+            if (activeBossRuntimeId < 0 || activeBossDefeated)
+                return;
+
+            foreach (var unit in enemyUnits)
+            {
+                if (unit != null && unit.RuntimeId == activeBossRuntimeId && unit.IsDead)
+                {
+                    activeBossDefeated = true;
+                    return;
+                }
+            }
         }
     }
 }

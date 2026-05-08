@@ -96,6 +96,8 @@ namespace UnifyCountry.UI
         private bool battleWon;
         private bool runDeckInitialized;
         private bool rewardClaimed;
+        private int activeBossRuntimeId = -1;
+        private bool activeBossDefeated;
         private int selectedRewardIndex = -1;
         private SettlementStep settlementStep = SettlementStep.Result;
 
@@ -121,6 +123,8 @@ namespace UnifyCountry.UI
             battleEnded = false;
             battleWon = false;
             rewardClaimed = false;
+            activeBossRuntimeId = -1;
+            activeBossDefeated = false;
             selectedRewardIndex = -1;
             settlementRewardOptions.Clear();
             settlementStep = SettlementStep.Result;
@@ -173,6 +177,8 @@ namespace UnifyCountry.UI
             battleState.NextUnitRuntimeId = 1;
             battleEnded = false;
             battleWon = false;
+            activeBossRuntimeId = -1;
+            activeBossDefeated = false;
             playerBaseHp = PlayerBaseMaxHp;
 
             EnsureRunDeckInitialized();

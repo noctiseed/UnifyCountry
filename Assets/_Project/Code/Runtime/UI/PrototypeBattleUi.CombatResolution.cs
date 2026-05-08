@@ -8,7 +8,10 @@ namespace UnifyCountry.UI
     {
         private void SpawnCurrentWave(List<string> logLines)
         {
-            battleEffectResolver.SpawnCurrentWave(CurrentWaves, logLines);
+            var waveIndex = nextWaveIndex;
+            var wave = CurrentWaves != null && waveIndex >= 0 && waveIndex < CurrentWaves.Count ? CurrentWaves[waveIndex] : null;
+            var spawnedUnits = battleEffectResolver.SpawnCurrentWave(CurrentWaves, logLines);
+            TrackBossWave(wave, spawnedUnits);
         }
 
         private void ResolveEnemyAttack(List<string> logLines)
@@ -54,6 +57,30 @@ namespace UnifyCountry.UI
         private BattleUnit GetEnemyFrontUnit(int row)
         {
             return battleFormation.GetEnemyFrontUnit(row);
+        }
+
+        private void TrackBossWave(WaveSpawnRecord wave, List<BattleUnit> spawnedUnits)
+        {
+            if (wave == null || spawnedUnits == null || !IsBossWave(wave))
+                return;
+
+            activeBossRuntimeId = -1;
+            activeBossDefeated = false;
+            foreach (var unit in spawnedUnits)
+            {
+                if (unit == null || unit.Camp != CardCamp.Enemy || unit.UnitType != UnitType.Hero)
+                    continue;
+
+                activeBossRuntimeId = unit.RuntimeId;
+                break;
+            }
+        }
+
+        private static bool IsBossWave(WaveSpawnRecord wave)
+        {
+            return wave != null
+                && !string.IsNullOrWhiteSpace(wave.NoteKey)
+                && wave.NoteKey.ToLowerInvariant().Contains("boss");
         }
     }
 }
