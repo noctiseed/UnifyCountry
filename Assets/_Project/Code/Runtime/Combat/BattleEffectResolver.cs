@@ -243,6 +243,17 @@ namespace UnifyCountry.Combat
                             logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.Value} 层灼烧。");
                         }
                         break;
+                    case "DamageAndGainBurn":
+                        foreach (var unit in ResolveSkillTargetUnits(target))
+                        {
+                            DealDamage(null, unit, effect.Value, target.Row, logLines, $"「{card.CardName}」命中 {unit.Name}", true);
+                            if (unit != null && !unit.IsDead)
+                            {
+                                unit.AddBurn(effect.SecondaryValue);
+                                logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.SecondaryValue} 层灼烧。");
+                            }
+                        }
+                        break;
                     case "GainThorns":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                         {
@@ -430,6 +441,17 @@ namespace UnifyCountry.Combat
                     {
                         target.AddBurn(effect.Value);
                         logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 层灼烧。");
+                    }
+                    break;
+                case "DamageAndGainBurn":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        DealDamage(source, target, effect.Value, row, logLines, $"{source.Name} 触发「{effect.EffectName}」命中 {target.Name}", true);
+                        if (target != null && !target.IsDead)
+                        {
+                            target.AddBurn(effect.SecondaryValue);
+                            logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.SecondaryValue} 层灼烧。");
+                        }
                     }
                     break;
                 case "GainThorns":

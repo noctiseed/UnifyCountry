@@ -17,5 +17,7 @@ PLAN_002,齐射,Skill,1,Player,Neutral,Common,99,PLAN_002,EFFECT_PLAN_002,plan_v
 PLAN_003,疗伤,Skill,1,Player,Neutral,Common,99,PLAN_003,EFFECT_PLAN_003,plan_heal
 PLAN_004,强化,Skill,1,Player,Neutral,Common,99,PLAN_004,EFFECT_PLAN_004,plan_strengthen
 PLAN_005,加固,Skill,1,Player,Neutral,Common,99,PLAN_005,EFFECT_PLAN_005,plan_fortify
+PLAN_006,火攻,Skill,2,Player,Neutral,Common,99,PLAN_006,EFFECT_PLAN_006,plan_fire_attack
+PLAN_007,火箭,Skill,2,Player,Neutral,Common,99,PLAN_007,EFFECT_PLAN_007,plan_fire_arrow
 PLAN_008,斩杀,Skill,1,Player,Neutral,Common,99,PLAN_008,EFFECT_PLAN_008,plan_execute
 PLAN_009,草船借箭,Skill,1,Player,Neutral,Common,99,PLAN_009,EFFECT_PLAN_009,plan_borrow_arrows

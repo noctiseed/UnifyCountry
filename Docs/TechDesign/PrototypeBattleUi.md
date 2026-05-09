@@ -70,7 +70,7 @@ UnifyCountry / Prototype / Create Battle UI Preview
 - 点击重开可以重置当前关卡。
 - 英雄技能已接入第一版触发机制：支持上阵、攻击、受伤前、受伤后、玩家正式回合开始和玩家回合结束触发。
 - 简雍「论客」已接入 `OnTurnStart`：当简雍存活在场上时，每个玩家正式回合开始额外抽 1 张牌。
-- 当前计谋牌包括滚石、齐射、疗伤、强化、加固、斩杀和草船借箭。
+- 当前计谋牌包括滚石、齐射、疗伤、强化、加固、火攻、火箭、斩杀和草船借箭。
 - 复苏 Buff 已接入：回合战斗结算后，存活单位每回合触发一次复苏，按触发前层数恢复生命，并使复苏层数减少 1；回合末 Buff 结算时灼烧优先于复苏，若单位死于灼烧则不会触发复苏。灼烧伤害会先尝试消耗护盾或免疫抵挡整次灼烧，再由护甲按点数抵挡剩余伤害。
 - 护甲 Buff 已接入：护甲为常驻点数型 Buff，受到敌方单位攻击时，每点护甲抵挡 1 点伤害并消耗对应点数；护盾优先于护甲消耗。
 - 荆棘 Buff 已接入：单位受到敌方单位攻击时，会使攻击者受到等同于当前荆棘层数的反伤；即使本次攻击被护盾、免疫或护甲抵挡，也会触发荆棘；荆棘为常驻型 Buff。
@@ -123,6 +123,7 @@ effects_v001.csv
 - `BuffAttackAndMaxHp`
 - `GainMaxHpAndRevival`
 - `GainBurn`
+- `DamageAndGainBurn`
 - `DamageGainEnergyOnKill`
 - `GainThorns`：增加荆棘层数，受到敌方单位攻击时反伤攻击者。
 
@@ -156,6 +157,8 @@ effects_v001.csv
 - `PLAN_003` 疗伤：`HealAndGainRevival` + `AllySingle`，治疗 2 点并获得 2 层复苏。
 - `PLAN_004` 强化：`BuffAttackAndMaxHp` + `AllySingle`，攻击 +2，最大血量 +2，并恢复 2 点生命。
 - `PLAN_005` 加固：`GainShield` + `AllySingle`，获得 1 层护盾。
+- `PLAN_006` 火攻：`DamageAndGainBurn` + `EnemySingle`，造成 3 点伤害并施加 2 层灼烧，费用 2。
+- `PLAN_007` 火箭：`DamageAndGainBurn` + `EnemyRow`，对敌方整排所有单位造成 1 点伤害并施加 2 层灼烧，费用 2。
 - `PLAN_008` 斩杀：`DamageGainEnergyOnKill` + `EnemySingle`，造成 1 点伤害，若直接击杀目标则获得 1 点可用费用。
 - `PLAN_009` 草船借箭：`DrawCards` + `NoTarget`，抽 2 张牌。
 
