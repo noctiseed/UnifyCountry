@@ -213,6 +213,13 @@ namespace UnifyCountry.Combat
                             logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.Value} 层灼烧。");
                         }
                         break;
+                    case "GainThorns":
+                        foreach (var unit in ResolveSkillTargetUnits(target))
+                        {
+                            unit.AddThorns(effect.Value);
+                            logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.Value} 层荆棘。");
+                        }
+                        break;
                     case "Damage":
                     case "BonusDamage":
                         foreach (var unit in ResolveSkillTargetUnits(target))
@@ -237,7 +244,7 @@ namespace UnifyCountry.Combat
             }
         }
 
-        public void DealDamage(BattleUnit source, BattleUnit target, int amount, int row, List<string> logLines, string actionText, bool triggerDamaged)
+        public void DealDamage(BattleUnit source, BattleUnit target, int amount, int row, List<string> logLines, string actionText, bool triggerDamaged, bool triggerThorns = false)
         {
             if (target == null || target.IsDead || amount <= 0)
                 return;
@@ -245,12 +252,14 @@ namespace UnifyCountry.Combat
             if (source != null && source.Camp != target.Camp && target.TryConsumeShield())
             {
                 logLines.Add($"{target.Name} 消耗 1 层护盾，抵挡了 {source.Name} 的本次攻击。");
+                TriggerThorns(source, target, row, logLines, triggerThorns);
                 return;
             }
 
             if (source != null && source.Camp != target.Camp && target.TryConsumeAttackImmunity())
             {
                 logLines.Add($"{target.Name} 免疫了 {source.Name} 的一次攻击。");
+                TriggerThorns(source, target, row, logLines, triggerThorns);
                 return;
             }
 
@@ -260,6 +269,8 @@ namespace UnifyCountry.Combat
             var hpDamage = hpBefore - target.CurrentHp;
             var reducedText = resolvedDamage != amount ? $"（原始 {amount}）" : string.Empty;
             logLines.Add($"{actionText}，结算伤害 {resolvedDamage}{reducedText}，扣除生命 {hpDamage} 点。");
+
+            TriggerThorns(source, target, row, logLines, triggerThorns);
 
             if (triggerDamaged && hpDamage > 0 && !target.IsDead)
                 TriggerEffects(target, "OnDamaged", row, source, logLines);
@@ -305,7 +316,7 @@ namespace UnifyCountry.Combat
                 return;
 
             var attack = attacker.Attack;
-            DealDamage(attacker, target, attack, row, logLines, $"{attacker.Name} {verb}{BattleFormation.GetFormationRowName(row)} {target.Name}（攻击力 {attack}）", true);
+            DealDamage(attacker, target, attack, row, logLines, $"{attacker.Name} {verb}{BattleFormation.GetFormationRowName(row)} {target.Name}（攻击力 {attack}）", true, true);
             TriggerEffects(attacker, "OnAttack", row, target, logLines);
         }
 
@@ -322,12 +333,21 @@ namespace UnifyCountry.Combat
 
                 logLines.Add($"{attacker.Name} 触发「{effect.EffectName}」。");
                 foreach (var target in targets)
-                    DealDamage(attacker, target, effect.Value, row, logLines, $"{effect.EffectName} 命中{BattleFormation.GetFormationRowName(row)} {target.Name}", true);
+                    DealDamage(attacker, target, effect.Value, row, logLines, $"{effect.EffectName} 命中{BattleFormation.GetFormationRowName(row)} {target.Name}", true, true);
 
                 return true;
             }
 
             return false;
+        }
+
+        private void TriggerThorns(BattleUnit source, BattleUnit target, int row, List<string> logLines, bool triggerThorns)
+        {
+            if (!triggerThorns || source == null || target == null || source.IsDead || source.Camp == target.Camp || target.Thorns <= 0)
+                return;
+
+            var thornsDamage = target.Thorns;
+            DealDamage(null, source, thornsDamage, row, logLines, $"{target.Name} 的荆棘反伤 {source.Name}", true);
         }
 
         private void ResolveEffect(BattleUnit source, EffectRecord effect, int row, BattleUnit currentTarget, List<string> logLines)
@@ -360,6 +380,13 @@ namespace UnifyCountry.Combat
                     {
                         target.AddBurn(effect.Value);
                         logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 层灼烧。");
+                    }
+                    break;
+                case "GainThorns":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        target.AddThorns(effect.Value);
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 层荆棘。");
                     }
                     break;
                 case "DrawCards":

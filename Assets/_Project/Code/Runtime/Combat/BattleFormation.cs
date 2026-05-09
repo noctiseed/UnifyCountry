@@ -447,6 +447,7 @@ namespace UnifyCountry.Combat
                     var damage = unit.ResolveBurn();
                     logLines.Add($"{unit.Name} 触发灼烧 {burnBefore}，受到 {damage} 点伤害，灼烧降为 {unit.Burn}。");
                 }
+
             }
         }
 
