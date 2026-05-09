@@ -214,6 +214,14 @@ namespace UnifyCountry.Combat
                             logLines.Add($"「{card.CardName}」使 {unit.Name} 攻击 +{effect.Value}，最大血量 +{effect.SecondaryValue}，并恢复 {effect.SecondaryValue} 点生命。");
                         }
                         break;
+                    case "GainMaxHpAndRevival":
+                        foreach (var unit in ResolveSkillTargetUnits(target))
+                        {
+                            unit.AddMaxHp(effect.Value, true);
+                            unit.AddRevival(effect.SecondaryValue);
+                            logLines.Add($"「{card.CardName}」使 {unit.Name} 最大血量 +{effect.Value}，恢复 {effect.Value} 点生命，并获得 {effect.SecondaryValue} 层复苏。");
+                        }
+                        break;
                     case "GainShield":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                         {
@@ -393,6 +401,14 @@ namespace UnifyCountry.Combat
                     {
                         target.AddAttack(effect.Value);
                         logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 攻击 +{effect.Value}。");
+                    }
+                    break;
+                case "GainMaxHpAndRevival":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        target.AddMaxHp(effect.Value, true);
+                        target.AddRevival(effect.SecondaryValue);
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 最大血量 +{effect.Value}，恢复 {effect.Value} 点生命，并获得 {effect.SecondaryValue} 层复苏。");
                     }
                     break;
                 case "GainShield":
