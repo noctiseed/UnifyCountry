@@ -35,20 +35,19 @@ namespace UnifyCountry.UI
                 name.gameObject.AddComponent<Outline>().effectColor = new Color(0.12f, 0.06f, 0.04f, 0.9f);
 
             CreateUnitAttackIcon(root.transform, unit, hasSprite, compact);
-            CreateUnitDefenseBuffIcons(root.transform, unit, hasSprite);
 
             var statusText = GetUnitStatusText(unit);
             if (!string.IsNullOrEmpty(statusText))
             {
                 var status = CreateText(root.transform, statusText, compact ? 12 : 13, TextAnchor.MiddleCenter, hasSprite ? Color.white : new Color(0.08f, 0.2f, 0.34f));
-                var defenseBuffIconCount = GetVisibleBuffIconCount(unit);
-                var statusMinX = defenseBuffIconCount > 0 ? 0.32f + defenseBuffIconCount * 0.26f : hasSprite ? 0.3f : 0.32f;
+                var statusMinX = hasSprite ? 0.3f : 0.32f;
                 SetRect(status.rectTransform, hasSprite ? new Vector2(statusMinX, 0.2f) : new Vector2(statusMinX, 0.22f), hasSprite ? new Vector2(1.08f, 0.34f) : new Vector2(1f, 0.36f), Vector2.zero, Vector2.zero);
                 if (hasSprite)
                     status.gameObject.AddComponent<Outline>().effectColor = new Color(0.04f, 0.1f, 0.18f, 0.9f);
             }
 
             CreateHealthBar(root.transform, unit.CurrentHp, unit.MaxHp, new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.18f));
+            CreateUnitDefenseBuffIcons(root.transform, unit, hasSprite);
 
             return root.rectTransform;
         }
@@ -207,23 +206,22 @@ namespace UnifyCountry.UI
             }
         }
 
-        private static int GetVisibleBuffIconCount(BattleUnit unit)
-        {
-            return (unit.Shield > 0 ? 1 : 0)
-                + (unit.Armor > 0 ? 1 : 0)
-                + (unit.AttackImmunityCharges > 0 ? 1 : 0)
-                + (unit.Revival > 0 ? 1 : 0)
-                + (unit.Burn > 0 ? 1 : 0)
-                + (unit.Thorns > 0 ? 1 : 0);
-        }
-
         private void CreateUnitBuffIcon(Transform parent, int iconIndex, Color backgroundColor, System.Action<Transform> createShape, bool useBackgroundFrame, string tooltipText)
         {
             var icon = CreateImage(parent, "Buff Icon", backgroundColor);
             icon.raycastTarget = true;
 
-            var minX = 0.32f + iconIndex * 0.26f;
-            SetRect(icon.rectTransform, new Vector2(minX, 0.2f), new Vector2(minX + 0.22f, 0.42f), Vector2.zero, Vector2.zero);
+            const int iconsPerRow = 4;
+            const float iconWidth = 0.18f;
+            const float iconHeight = 0.18f;
+            const float columnStep = 0.2f;
+            const float rowStep = 0.2f;
+
+            var column = iconIndex % iconsPerRow;
+            var row = iconIndex / iconsPerRow;
+            var minX = 0.08f + column * columnStep;
+            var maxY = 0.02f - row * rowStep;
+            SetRect(icon.rectTransform, new Vector2(minX, maxY - iconHeight), new Vector2(minX + iconWidth, maxY), Vector2.zero, Vector2.zero);
 
             if (useBackgroundFrame)
             {
