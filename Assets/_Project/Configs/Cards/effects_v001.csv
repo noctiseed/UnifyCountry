@@ -5,7 +5,7 @@ EFFECT_ZF_002,据水断桥,OnTurnEnd,GainThorns,Self,2,0,HeroSkill|Shu|Thorns,�
 EFFECT_CC_001,魏武号令,OnPlay,BuffAttack,AllyAllSameRow,1,0,HeroSkill|Wei,上阵时同军所有敌方单位攻击+1
 EFFECT_XHD_001,刚烈,OnDamaged,BuffAttack,Self,1,0,HeroSkill|Wei,每次受击后攻击力+1
 EFFECT_CR_001,固守,BeforeDamaged,DamageCap,Self,4,0,HeroSkill|Wei,每次受到伤害时最多只受到4点伤害
-EFFECT_ZY_001,龙胆,OnPlay,GainShield,Self,2,0,HeroSkill|Shu|Shield,上阵时获得2层护盾，每层可抵挡一次敌方攻击
+EFFECT_ZY_001,龙胆,OnTurnStart,GainArmor,Self,5,0,HeroSkill|Shu|Armor,每回合开始时获得5点护甲
 EFFECT_MC_001,铁骑横扫,OnAttack,ReplaceAttack,EnemyAllSameRow,2,0,HeroSkill|Shu|AreaAttack,攻击对方当前军的所有单位
 EFFECT_JY_001,论客,OnTurnStart,DrawCards,Self,1,0,HeroSkill|Shu|Draw,当该英雄存活在场上时，每回合额外抽1张牌
 EFFECT_PLAN_001,滚石,OnPlay,Damage,EnemySingle,3,0,Plan|Damage,对该单位造成3点伤害
