@@ -169,6 +169,17 @@ namespace UnifyCountry.UI
                     !hasBurnSprite,
                     $"灼烧 {unit.Burn}：回合结束时受到等同于当前灼烧层数的伤害，然后灼烧 -1");
             }
+
+            if (unit.Thorns > 0)
+            {
+                CreateUnitBuffIcon(
+                    parent,
+                    iconIndex++,
+                    hasSprite ? new Color(0.18f, 0.34f, 0.08f, 0.88f) : new Color(0.28f, 0.48f, 0.12f, 0.94f),
+                    iconParent => CreateBuffTextIcon(iconParent, "荆", new Color(0.82f, 1f, 0.58f)),
+                    true,
+                    $"荆棘 {unit.Thorns}：受到敌方单位攻击时，使攻击者受到等同于当前荆棘层数的伤害");
+            }
         }
 
         private static int GetVisibleBuffIconCount(BattleUnit unit)
@@ -176,7 +187,8 @@ namespace UnifyCountry.UI
             return (unit.Shield > 0 ? 1 : 0)
                 + (unit.AttackImmunityCharges > 0 ? 1 : 0)
                 + (unit.Revival > 0 ? 1 : 0)
-                + (unit.Burn > 0 ? 1 : 0);
+                + (unit.Burn > 0 ? 1 : 0)
+                + (unit.Thorns > 0 ? 1 : 0);
         }
 
         private void CreateUnitBuffIcon(Transform parent, int iconIndex, Color backgroundColor, System.Action<Transform> createShape, bool useBackgroundFrame, string tooltipText)
@@ -301,6 +313,9 @@ namespace UnifyCountry.UI
 
             if (unit.Burn > 0)
                 statuses.Add($"灼{unit.Burn}");
+
+            if (unit.Thorns > 0)
+                statuses.Add($"荆{unit.Thorns}");
 
             return string.Join("  ", statuses);
         }

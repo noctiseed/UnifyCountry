@@ -73,6 +73,7 @@ UnifyCountry / Prototype / Create Battle UI Preview
 - 当前计谋牌包括滚石、齐射、疗伤、强化、加固、斩杀和草船借箭。
 - 复苏 Buff 已接入：回合战斗结算后，存活单位每回合触发一次复苏，按触发前层数恢复生命，并使复苏层数减少 1。
 - 当前效果类型支持治疗、攻击加成、最大血量加成、次数型护盾、复苏、伤害、击杀返费、抽牌、额外伤害、替代攻击和单次伤害上限。
+- 荆棘 Buff 已接入：单位受到敌方单位攻击时，会使攻击者受到等同于当前荆棘层数的反伤；即使本次攻击被护盾或免疫抵挡，也会触发荆棘；荆棘为常驻型 Buff。
 - 单位 token 会在名称下方、血条上方显示状态短文本，例如 `攻+1`、`盾2`、`免1`、`复2`、`限4`。
 
 ## Data Files
@@ -118,6 +119,7 @@ effects_v001.csv
 - `HealAndGainRevival`
 - `BuffAttackAndMaxHp`
 - `DamageGainEnergyOnKill`
+- `GainThorns`
 
 伤害触发规则：
 

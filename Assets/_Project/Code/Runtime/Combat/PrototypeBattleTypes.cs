@@ -9,7 +9,8 @@ namespace UnifyCountry.Combat
         Shield,
         AttackImmunity,
         Revival,
-        Burn
+        Burn,
+        Thorns
     }
 
     internal sealed class BattleBuff
@@ -72,6 +73,7 @@ namespace UnifyCountry.Combat
         public int AttackImmunityCharges => GetBuffStacks(BattleBuffType.AttackImmunity);
         public int Revival => GetBuffStacks(BattleBuffType.Revival);
         public int Burn => GetBuffStacks(BattleBuffType.Burn);
+        public int Thorns => GetBuffStacks(BattleBuffType.Thorns);
         public bool IsDead => CurrentHp <= 0;
 
         public void Heal(int amount)
@@ -123,6 +125,11 @@ namespace UnifyCountry.Combat
         public void AddBurn(int stacks)
         {
             AddBuff(BattleBuffType.Burn, stacks);
+        }
+
+        public void AddThorns(int stacks)
+        {
+            AddBuff(BattleBuffType.Thorns, stacks);
         }
 
         public int ResolveRevival()
