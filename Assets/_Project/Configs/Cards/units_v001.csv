@@ -1,7 +1,7 @@
 card_id,unit_id,unit_name,unit_type,hp,attack,role,tags,skill_effect_ids
 CARD_001,UNIT_001,刘备,Hero,7,6,Leader,Hero|Shu,EFFECT_LB_001
 CARD_002,UNIT_002,关羽,Hero,8,8,Duelist,Hero|Shu,EFFECT_GY_001
-CARD_003,UNIT_003,张飞,Hero,10,6,Guard,Hero|Shu,EFFECT_ZF_001
+CARD_003,UNIT_003,张飞,Hero,20,5,Guard,Hero|Shu|Thorns,EFFECT_ZF_002
 CARD_004,UNIT_004,盾牌兵,Soldier,8,2,Tank,Soldier|Guard,
 CARD_005,UNIT_005,弓箭手,Soldier,2,6,Ranged,Soldier|Backline,
 CARD_006,UNIT_006,曹操,Hero,8,5,Leader,Hero|Wei,EFFECT_CC_001

@@ -77,6 +77,7 @@ namespace UnifyCountry.UI
             if (TryFinishBattleAfterBossDefeat(logLines))
                 yield break;
 
+            TriggerPlayerTurnEndEffects(logLines);
             ResolveEndOfTurnBuffs(logLines);
             RefreshUnitHealthViews();
             UpdateActiveTurnLog(logLines);
@@ -202,6 +203,11 @@ namespace UnifyCountry.UI
         private void TriggerPlayerTurnStartEffects(List<string> logLines)
         {
             battleEffectResolver.TriggerPlayerTurnStartEffects(logLines);
+        }
+
+        private void TriggerPlayerTurnEndEffects(List<string> logLines)
+        {
+            battleEffectResolver.TriggerPlayerTurnEndEffects(logLines);
         }
 
         private int DrawCardsWithCount(int count)

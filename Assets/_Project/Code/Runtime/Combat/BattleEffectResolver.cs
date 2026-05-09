@@ -139,6 +139,21 @@ namespace UnifyCountry.Combat
             }
         }
 
+        public void TriggerPlayerTurnEndEffects(List<string> logLines)
+        {
+            for (var row = 0; row < BattleFormation.FormationRows; row++)
+            {
+                for (var column = 0; column < BattleFormation.MaxFormationSlots; column++)
+                {
+                    var unit = state.PlayerUnits[BattleFormation.GetSlotIndex(row, column)];
+                    if (unit == null || unit.IsDead)
+                        continue;
+
+                    TriggerEffects(unit, "OnTurnEnd", row, null, logLines);
+                }
+            }
+        }
+
         public void TriggerEffects(BattleUnit source, string timing, int row, BattleUnit currentTarget, List<string> logLines)
         {
             if (source == null || source.IsDead)
