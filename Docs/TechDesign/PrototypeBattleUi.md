@@ -170,3 +170,49 @@ effects_v001.csv
 - 战斗胜负弹窗
 - 更完整的 BuffInstance 数据结构与持续回合机制，例如将复苏、护盾、护甲、免疫、临时攻击等统一到可配置持续时间
 - ScriptableObject 数据资产
+
+## UI Implementation Notes
+
+当前原型 UI 主要使用运行时代码生成，相关脚本集中在 `Assets/_Project/Code/Runtime/UI`：
+
+- `MainMenuUi.cs`：首页。
+- `CardCollectionUi.cs`：卧虎藏龙卡牌汇总页。
+- `PrototypeBattleUi*.cs`：战斗页面及其 partial 拆分，包括卡牌、单位、牌堆、结算、拖拽和施法等模块。
+
+这种方式适合早期快速验证规则和交互，但随着页面增多，`UI` 目录会同时承载页面、组件、布局工具和交互脚本，维护成本会逐渐上升。
+
+后续更推荐逐步迁移到 **Prefab + Controller** 的方式：
+
+```text
+Assets/_Project/Prefabs/UI/
+  Pages/
+    MainMenuPage.prefab
+    CardCollectionPage.prefab
+    BattlePage.prefab
+  Components/
+    CardView.prefab
+    UnitView.prefab
+    BuffIcon.prefab
+
+Assets/_Project/Code/Runtime/UI/
+  Common/
+    CardView.cs
+    UnitView.cs
+  MainMenu/
+    MainMenuController.cs
+  CardCollection/
+    CardCollectionController.cs
+  Battle/
+    BattleUiController.cs
+    BattleDragHandlers.cs
+    SkillCastingComponents.cs
+```
+
+推荐迁移节奏：
+
+1. 新页面优先用 Prefab 搭静态结构，代码只负责绑定数据和按钮事件。
+2. 先抽重复组件，例如 `CardView.prefab`，让战斗手牌、奖励牌和卧虎藏龙卡牌共用同一套表现。
+3. 再把页面级脚本按功能拆目录，避免所有页面继续堆在 `Runtime/UI` 根目录。
+4. 战斗 UI 可以最后迁移，因为它包含拖拽、施法、动画和状态刷新，风险最高。
+
+短期内保留现有代码生成 UI 是可以接受的；中期目标是让美术布局、字体、间距、按钮状态等尽量在 Prefab 中调整，代码只保留数据驱动和交互逻辑。

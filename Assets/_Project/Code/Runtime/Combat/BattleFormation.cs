@@ -329,6 +329,12 @@ namespace UnifyCountry.Combat
             return row * MaxFormationSlots + column;
         }
 
+        public static IEnumerable<int> GetRowsFrontToRear()
+        {
+            for (var row = FormationRows - 1; row >= 0; row--)
+                yield return row;
+        }
+
         public static int GetSlotRow(int slotIndex)
         {
             return Mathf.Clamp(slotIndex / MaxFormationSlots, 0, FormationRows - 1);

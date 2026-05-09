@@ -54,7 +54,7 @@ namespace UnifyCountry.Combat
 
         public void ResolveEnemyAttack(List<string> logLines)
         {
-            for (var row = 0; row < BattleFormation.FormationRows; row++)
+            foreach (var row in BattleFormation.GetRowsFrontToRear())
             {
                 foreach (var attacker in formation.GetAliveEnemyUnitsInRow(row))
                 {
@@ -95,7 +95,7 @@ namespace UnifyCountry.Combat
 
         public void ResolvePlayerAttack(List<string> logLines)
         {
-            for (var row = 0; row < BattleFormation.FormationRows; row++)
+            foreach (var row in BattleFormation.GetRowsFrontToRear())
             {
                 for (var column = BattleFormation.MaxFormationSlots - 1; column >= 0; column--)
                 {

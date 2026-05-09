@@ -177,7 +177,7 @@ namespace UnifyCountry.UI
         private List<BattleUnit> CollectAttackers(List<BattleUnit> units, bool playerSide)
         {
             var attackers = new List<BattleUnit>();
-            for (var row = 0; row < FormationRows; row++)
+            foreach (var row in BattleFormation.GetRowsFrontToRear())
             {
                 if (playerSide)
                 {
