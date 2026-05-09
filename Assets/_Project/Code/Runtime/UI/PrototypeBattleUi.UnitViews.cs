@@ -190,12 +190,19 @@ namespace UnifyCountry.UI
 
             if (unit.Thorns > 0)
             {
+                var hasThornsSprite = TryGetThornsIconSprite(out var thornsSprite);
                 CreateUnitBuffIcon(
                     parent,
                     iconIndex++,
-                    hasSprite ? new Color(0.18f, 0.34f, 0.08f, 0.88f) : new Color(0.28f, 0.48f, 0.12f, 0.94f),
-                    iconParent => CreateBuffTextIcon(iconParent, "荆", new Color(0.82f, 1f, 0.58f)),
-                    true,
+                    hasThornsSprite ? Color.clear : hasSprite ? new Color(0.18f, 0.34f, 0.08f, 0.88f) : new Color(0.28f, 0.48f, 0.12f, 0.94f),
+                    iconParent =>
+                    {
+                        if (hasThornsSprite)
+                            CreateBuffIconSprite(iconParent, thornsSprite);
+                        else
+                            CreateBuffTextIcon(iconParent, "荆", new Color(0.82f, 1f, 0.58f));
+                    },
+                    !hasThornsSprite,
                     $"荆棘 {unit.Thorns}：受到敌方单位攻击时，使攻击者受到等同于当前荆棘层数的伤害");
             }
         }

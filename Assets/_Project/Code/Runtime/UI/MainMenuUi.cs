@@ -10,13 +10,13 @@ namespace UnifyCountry.UI
     public sealed class MainMenuUi : MonoBehaviour
     {
         private const string BattleSceneName = "SCN_BattlePrototype";
+        private const string CardCollectionSceneName = "SCN_CardCollection";
         private static readonly Color BackgroundTop = new Color(0.47f, 0.68f, 0.74f);
         private static readonly Color BackgroundBottom = new Color(0.22f, 0.36f, 0.31f);
         private static readonly Color PaperColor = new Color(0.93f, 0.62f, 0.13f);
         private static readonly Color PaperShadow = new Color(0.46f, 0.22f, 0.05f);
         private static readonly Color WoodColor = new Color(0.63f, 0.19f, 0.06f);
         private static readonly Color GoldColor = new Color(0.82f, 0.61f, 0.25f);
-        private static readonly Color InkColor = new Color(0.35f, 0.18f, 0.07f);
 
         [SerializeField] private Font uiFont;
 
@@ -131,7 +131,6 @@ namespace UnifyCountry.UI
             CreateLandscapeBand(parent, "Rear Mountains", new Vector2(0f, 0.43f), new Vector2(1f, 0.67f), new Color(0.58f, 0.66f, 0.48f, 0.7f));
             CreateLandscapeBand(parent, "Middle Hills", new Vector2(0f, 0.28f), new Vector2(1f, 0.48f), new Color(0.32f, 0.49f, 0.31f, 0.82f));
             CreateLandscapeBand(parent, "Front Ground", new Vector2(0f, 0f), new Vector2(1f, 0.22f), new Color(0.2f, 0.29f, 0.21f, 0.95f));
-
         }
 
         private void CreateLandscapeBand(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Color color)
@@ -198,12 +197,12 @@ namespace UnifyCountry.UI
         {
             var items = new List<MenuItem>
             {
-                new MenuItem("一统天下", true),
-                new MenuItem("群雄并起", false),
-                new MenuItem("重提往事", false),
-                new MenuItem("约法三章", false),
-                new MenuItem("卧虎藏龙", false),
-                new MenuItem("归隐山林", false)
+                new MenuItem("\u4e00\u7edf\u5929\u4e0b", MenuAction.StartGame),
+                new MenuItem("\u7fa4\u96c4\u5e76\u8d77", MenuAction.Disabled),
+                new MenuItem("\u91cd\u63d0\u5f80\u4e8b", MenuAction.Disabled),
+                new MenuItem("\u7ea6\u6cd5\u4e09\u7ae0", MenuAction.Disabled),
+                new MenuItem("\u5367\u864e\u85cf\u9f99", MenuAction.OpenCardCollection),
+                new MenuItem("\u5f52\u9690\u5c71\u6797", MenuAction.Disabled)
             };
 
             const float right = 0.84f;
@@ -228,8 +227,11 @@ namespace UnifyCountry.UI
             button.transition = Selectable.Transition.ColorTint;
             button.targetGraphic = root;
             button.interactable = item.Enabled;
-            if (item.Enabled)
+
+            if (item.Action == MenuAction.StartGame)
                 button.onClick.AddListener(StartGame);
+            else if (item.Action == MenuAction.OpenCardCollection)
+                button.onClick.AddListener(OpenCardCollection);
 
             var label = CreateText(root.transform, ToVerticalText(item.Label), item.Enabled ? 42 : 38, TextAnchor.MiddleCenter, item.Enabled ? Color.white : new Color(1f, 0.86f, 0.6f, 0.7f));
             label.fontStyle = FontStyle.Bold;
@@ -249,7 +251,7 @@ namespace UnifyCountry.UI
             seal.sprite = GetRoundedSprite();
             seal.type = Image.Type.Sliced;
             SetRect(seal.rectTransform, new Vector2(0.08f, 0.12f), new Vector2(0.18f, 0.28f), Vector2.zero, Vector2.zero);
-            var sealText = CreateText(seal.transform, "令", 52, TextAnchor.MiddleCenter, new Color(1f, 0.88f, 0.62f));
+            var sealText = CreateText(seal.transform, "\u4ee4", 52, TextAnchor.MiddleCenter, new Color(1f, 0.88f, 0.62f));
             sealText.fontStyle = FontStyle.Bold;
             SetRect(sealText.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
@@ -258,13 +260,18 @@ namespace UnifyCountry.UI
             dice.type = Image.Type.Sliced;
             SetRect(dice.rectTransform, new Vector2(0.82f, 0.77f), new Vector2(0.91f, 0.9f), Vector2.zero, Vector2.zero);
             CreateBorder(dice.transform, new Color(0.2f, 0.16f, 0.12f), 3f);
-            var dot = CreateText(dice.transform, "●\n  ●", 18, TextAnchor.MiddleCenter, new Color(0.12f, 0.08f, 0.06f));
+            var dot = CreateText(dice.transform, "\u25cf\n  \u25cf", 18, TextAnchor.MiddleCenter, new Color(0.12f, 0.08f, 0.06f));
             SetRect(dot.rectTransform, new Vector2(0.12f, 0.1f), new Vector2(0.88f, 0.9f), Vector2.zero, Vector2.zero);
         }
 
         private void StartGame()
         {
             SceneManager.LoadScene(BattleSceneName);
+        }
+
+        private void OpenCardCollection()
+        {
+            SceneManager.LoadScene(CardCollectionSceneName);
         }
 
         private static string ToVerticalText(string value)
@@ -338,14 +345,22 @@ namespace UnifyCountry.UI
 
         private readonly struct MenuItem
         {
-            public MenuItem(string label, bool enabled)
+            public MenuItem(string label, MenuAction action)
             {
                 Label = label;
-                Enabled = enabled;
+                Action = action;
             }
 
             public string Label { get; }
-            public bool Enabled { get; }
+            public MenuAction Action { get; }
+            public bool Enabled => Action != MenuAction.Disabled;
+        }
+
+        private enum MenuAction
+        {
+            Disabled,
+            StartGame,
+            OpenCardCollection
         }
     }
 }

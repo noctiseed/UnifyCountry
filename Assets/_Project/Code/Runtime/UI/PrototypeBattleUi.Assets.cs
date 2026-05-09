@@ -140,5 +140,23 @@ namespace UnifyCountry.UI
             return false;
 #endif
         }
+
+        private bool TryGetThornsIconSprite(out Sprite sprite)
+        {
+            if (thornsIconSprite != null)
+            {
+                sprite = thornsIconSprite;
+                return true;
+            }
+
+#if UNITY_EDITOR
+            sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/_Project/Art/UI/Icons/icon_thorns.png");
+            return sprite != null;
+#else
+            sprite = null;
+            return false;
+#endif
+        }
     }
 }
