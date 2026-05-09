@@ -330,15 +330,6 @@ namespace UnifyCountry.UI
                     statuses.Add($"限{effect.Value}");
             }
 
-            if (unit.Burn > 0)
-                statuses.Add($"灼{unit.Burn}");
-
-            if (unit.Armor > 0)
-                statuses.Add($"甲{unit.Armor}");
-
-            if (unit.Thorns > 0)
-                statuses.Add($"荆{unit.Thorns}");
-
             return string.Join("  ", statuses);
         }
 

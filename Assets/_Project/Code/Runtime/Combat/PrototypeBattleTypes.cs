@@ -170,19 +170,15 @@ namespace UnifyCountry.Combat
             return CurrentHp - hpBefore;
         }
 
-        public int ResolveBurn()
+        public void DecayBurn()
         {
             var buff = GetBuff(BattleBuffType.Burn);
-            if (buff == null || buff.Stacks <= 0 || IsDead)
-                return 0;
+            if (buff == null || buff.Stacks <= 0)
+                return;
 
-            var damage = buff.Stacks;
-            var hpDamage = TakeDamage(damage);
             buff.Stacks = Mathf.Max(0, buff.Stacks - 1);
             if (buff.Stacks == 0)
                 buffs.Remove(buff);
-
-            return hpDamage;
         }
 
         public int TakeDamage(int amount)

@@ -434,21 +434,50 @@ namespace UnifyCountry.Combat
                 if (unit == null || unit.IsDead)
                     continue;
 
-                if (unit.Revival > 0)
+                if (unit.Burn > 0)
+                {
+                    var burnBefore = unit.Burn;
+                    var damage = ResolveBurnDamage(unit, burnBefore, logLines);
+                    unit.DecayBurn();
+                    logLines.Add($"{unit.Name} 触发灼烧 {burnBefore}，受到 {damage} 点伤害，灼烧降为 {unit.Burn}。");
+                }
+
+                if (unit.Revival > 0 && !unit.IsDead)
                 {
                     var revivalBefore = unit.Revival;
                     var healed = unit.ResolveRevival();
                     logLines.Add($"{unit.Name} 触发复苏 {revivalBefore}，恢复 {healed} 点生命，复苏降为 {unit.Revival}。");
                 }
 
-                if (unit.Burn > 0 && !unit.IsDead)
-                {
-                    var burnBefore = unit.Burn;
-                    var damage = unit.ResolveBurn();
-                    logLines.Add($"{unit.Name} 触发灼烧 {burnBefore}，受到 {damage} 点伤害，灼烧降为 {unit.Burn}。");
-                }
-
             }
+        }
+
+        private static int ResolveBurnDamage(BattleUnit unit, int damage, List<string> logLines)
+        {
+            var remainingDamage = Mathf.Max(0, damage);
+            if (remainingDamage <= 0 || unit == null || unit.IsDead)
+                return 0;
+
+            if (unit.TryConsumeShield())
+            {
+                logLines.Add($"{unit.Name} 消耗 1 层护盾，抵挡了本次灼烧。");
+                return 0;
+            }
+
+            if (unit.TryConsumeAttackImmunity())
+            {
+                logLines.Add($"{unit.Name} 免疫了本次灼烧。");
+                return 0;
+            }
+
+            var armorAbsorbed = unit.ConsumeArmor(remainingDamage);
+            if (armorAbsorbed > 0)
+            {
+                remainingDamage = Mathf.Max(0, remainingDamage - armorAbsorbed);
+                logLines.Add($"{unit.Name} 消耗 {armorAbsorbed} 点护甲，抵挡了 {armorAbsorbed} 点灼烧伤害。");
+            }
+
+            return unit.TakeDamage(remainingDamage);
         }
 
         private static bool RemoveDeadUnitsFromFormation(List<BattleUnit> units, List<string> logLines)
