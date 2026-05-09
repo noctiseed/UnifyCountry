@@ -221,6 +221,13 @@ namespace UnifyCountry.Combat
                             logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.Value} 层护盾。");
                         }
                         break;
+                    case "GainArmor":
+                        foreach (var unit in ResolveSkillTargetUnits(target))
+                        {
+                            unit.AddArmor(effect.Value);
+                            logLines.Add($"「{card.CardName}」使 {unit.Name} 获得 {effect.Value} 点护甲。");
+                        }
+                        break;
                     case "GainBurn":
                         foreach (var unit in ResolveSkillTargetUnits(target))
                         {
@@ -279,6 +286,11 @@ namespace UnifyCountry.Combat
             }
 
             var resolvedDamage = ApplyBeforeDamagedEffects(target, source, amount, row, logLines);
+            var armorAbsorbed = source != null && source.Camp != target.Camp ? target.ConsumeArmor(resolvedDamage) : 0;
+            if (armorAbsorbed > 0)
+                logLines.Add($"{target.Name} 消耗 {armorAbsorbed} 点护甲，抵挡了 {armorAbsorbed} 点伤害。");
+
+            resolvedDamage = Mathf.Max(0, resolvedDamage - armorAbsorbed);
             var hpBefore = target.CurrentHp;
             target.TakeDamage(resolvedDamage);
             var hpDamage = hpBefore - target.CurrentHp;
@@ -388,6 +400,13 @@ namespace UnifyCountry.Combat
                     {
                         target.AddShield(effect.Value);
                         logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 层护盾。");
+                    }
+                    break;
+                case "GainArmor":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        target.AddArmor(effect.Value);
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 点护甲。");
                     }
                     break;
                 case "GainBurn":

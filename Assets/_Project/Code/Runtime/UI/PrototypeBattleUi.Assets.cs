@@ -87,6 +87,24 @@ namespace UnifyCountry.UI
 #endif
         }
 
+        private bool TryGetArmorIconSprite(out Sprite sprite)
+        {
+            if (armorIconSprite != null)
+            {
+                sprite = armorIconSprite;
+                return true;
+            }
+
+#if UNITY_EDITOR
+            sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/_Project/Art/UI/Icons/icon_armor.png");
+            return sprite != null;
+#else
+            sprite = null;
+            return false;
+#endif
+        }
+
         private bool TryGetRegenerationIconSprite(out Sprite sprite)
         {
             if (regenerationIconSprite != null)

@@ -123,6 +123,24 @@ namespace UnifyCountry.UI
                     $"护盾 {unit.Shield} 层：每层抵挡一次敌方攻击");
             }
 
+            if (unit.Armor > 0)
+            {
+                var hasArmorSprite = TryGetArmorIconSprite(out var armorSprite);
+                CreateUnitBuffIcon(
+                    parent,
+                    iconIndex++,
+                    hasArmorSprite ? Color.clear : hasSprite ? new Color(0.32f, 0.28f, 0.18f, 0.88f) : new Color(0.54f, 0.46f, 0.28f, 0.94f),
+                    iconParent =>
+                    {
+                        if (hasArmorSprite)
+                            CreateBuffIconSprite(iconParent, armorSprite);
+                        else
+                            CreateBuffTextIcon(iconParent, "甲", new Color(1f, 0.92f, 0.68f));
+                    },
+                    !hasArmorSprite,
+                    $"护甲 {unit.Armor}：受到敌方单位攻击时，每点护甲抵挡1点伤害并消耗1点。优先消耗护盾，再消耗护甲");
+            }
+
             if (unit.AttackImmunityCharges > 0)
             {
                 CreateUnitBuffIcon(
@@ -185,6 +203,7 @@ namespace UnifyCountry.UI
         private static int GetVisibleBuffIconCount(BattleUnit unit)
         {
             return (unit.Shield > 0 ? 1 : 0)
+                + (unit.Armor > 0 ? 1 : 0)
                 + (unit.AttackImmunityCharges > 0 ? 1 : 0)
                 + (unit.Revival > 0 ? 1 : 0)
                 + (unit.Burn > 0 ? 1 : 0)
@@ -313,6 +332,9 @@ namespace UnifyCountry.UI
 
             if (unit.Burn > 0)
                 statuses.Add($"灼{unit.Burn}");
+
+            if (unit.Armor > 0)
+                statuses.Add($"甲{unit.Armor}");
 
             if (unit.Thorns > 0)
                 statuses.Add($"荆{unit.Thorns}");

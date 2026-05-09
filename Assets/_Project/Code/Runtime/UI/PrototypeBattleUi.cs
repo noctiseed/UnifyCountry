@@ -32,6 +32,7 @@ namespace UnifyCountry.UI
         [SerializeField] private List<CardPortraitEntry> cardPortraits = new List<CardPortraitEntry>();
         [SerializeField] private Sprite attackIconSprite;
         [SerializeField] private Sprite shieldIconSprite;
+        [SerializeField] private Sprite armorIconSprite;
         [SerializeField] private Sprite regenerationIconSprite;
         [SerializeField] private Sprite burnIconSprite;
 

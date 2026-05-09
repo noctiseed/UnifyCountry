@@ -7,6 +7,7 @@ namespace UnifyCountry.Combat
     internal enum BattleBuffType
     {
         Shield,
+        Armor,
         AttackImmunity,
         Revival,
         Burn,
@@ -70,6 +71,7 @@ namespace UnifyCountry.Combat
         public int CurrentHp { get; private set; }
         public int FormationRow { get; set; } = -1;
         public int Shield => GetBuffStacks(BattleBuffType.Shield);
+        public int Armor => GetBuffStacks(BattleBuffType.Armor);
         public int AttackImmunityCharges => GetBuffStacks(BattleBuffType.AttackImmunity);
         public int Revival => GetBuffStacks(BattleBuffType.Revival);
         public int Burn => GetBuffStacks(BattleBuffType.Burn);
@@ -100,6 +102,26 @@ namespace UnifyCountry.Combat
         public void AddShield(int amount)
         {
             AddBuff(BattleBuffType.Shield, amount);
+        }
+
+        public void AddArmor(int amount)
+        {
+            AddBuff(BattleBuffType.Armor, amount);
+        }
+
+        public int ConsumeArmor(int damage)
+        {
+            var buff = GetBuff(BattleBuffType.Armor);
+            var resolvedDamage = Mathf.Max(0, damage);
+            if (buff == null || buff.Stacks <= 0 || resolvedDamage <= 0)
+                return 0;
+
+            var absorbed = Mathf.Min(buff.Stacks, resolvedDamage);
+            buff.Stacks -= absorbed;
+            if (buff.Stacks == 0)
+                buffs.Remove(buff);
+
+            return absorbed;
         }
 
         public bool TryConsumeShield()
