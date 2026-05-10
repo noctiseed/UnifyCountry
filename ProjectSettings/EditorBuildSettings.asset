@@ -12,6 +12,9 @@ EditorBuildSettings:
     path: Assets/_Project/Scenes/CardCollection/SCN_CardCollection.unity
     guid: 8c38cb3f4f64434e9638163d1017f678
   - enabled: 1
+    path: Assets/_Project/Scenes/RunMap/SCN_RunMap.unity
+    guid: 9bd67ab23f5e44588a1524c74c2c9f7a
+  - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
   - enabled: 1

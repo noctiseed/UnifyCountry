@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnifyCountry.Combat;
 using UnifyCountry.Config;
+using UnifyCountry.Map;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace UnifyCountry.UI
@@ -54,6 +56,7 @@ namespace UnifyCountry.UI
         private const int CardsDrawnPerTurn = 3;
         private const int PlayerBaseMaxHp = 10;
         private const string LordCardId = "CARD_001";
+        private const string RunMapSceneName = "SCN_RunMap";
         private const float FormationMoveDuration = 0.45f;
         private const string InitialBattleLog = "拖动手牌到友方阵地上阵，然后点击结束回合。";
 
@@ -145,7 +148,15 @@ namespace UnifyCountry.UI
                 return;
 
             currentLevelIndex++;
+            RunSession.SetActiveCampaignLevelIndex(currentLevelIndex);
             ResetBattle();
+        }
+
+        private void ReturnToRunMapAfterCampaign()
+        {
+            RunSession.ReplaceDeckCounts(runDeckCounts);
+            RunSession.CompleteActiveCampaign();
+            SceneManager.LoadScene(RunMapSceneName);
         }
 
         private void Awake()
@@ -174,7 +185,16 @@ namespace UnifyCountry.UI
             cardMap = cards.ToDictionary(card => card.CardId);
             RebuildCardPortraitMap();
             levels = PrototypeCsvDatabase.LoadBattleLevels(wavesCsv);
-            currentLevelIndex = Mathf.Clamp(currentLevelIndex, 0, Mathf.Max(0, levels.Count - 1));
+            if (RunSession.HasActiveBattle)
+            {
+                var activeLevelIds = new HashSet<string>(RunSession.GetActiveBattleLevelIds());
+                levels = levels.Where(level => activeLevelIds.Contains(level.LevelId)).ToList();
+                currentLevelIndex = Mathf.Clamp(RunSession.GetActiveCampaignLevelIndex(), 0, Mathf.Max(0, levels.Count - 1));
+            }
+            else
+            {
+                currentLevelIndex = Mathf.Clamp(currentLevelIndex, 0, Mathf.Max(0, levels.Count - 1));
+            }
 
             battleState.ClearBattleCollections();
             battleState.EnsureFormationSlots();
@@ -215,11 +235,24 @@ namespace UnifyCountry.UI
                 return;
 
             runDeckCounts.Clear();
-            var startingDeck = PrototypeCsvDatabase.LoadStartingDeck(startingDeckCsv);
-            foreach (var entry in startingDeck)
-                runDeckCounts[entry.Key] = entry.Value;
+            if (RunSession.HasActiveRun && RunSession.Current.DeckCounts.Count > 0)
+            {
+                foreach (var entry in RunSession.Current.DeckCounts)
+                    runDeckCounts[entry.Key] = entry.Value;
+            }
+            else
+            {
+                var startingDeck = PrototypeCsvDatabase.LoadStartingDeck(startingDeckCsv);
+                foreach (var entry in startingDeck)
+                    runDeckCounts[entry.Key] = entry.Value;
 
-            runDeckCounts[LordCardId] = 1;
+                runDeckCounts[LordCardId] = 1;
+                RunSession.ReplaceDeckCounts(runDeckCounts);
+            }
+
+            if (!runDeckCounts.ContainsKey(LordCardId))
+                runDeckCounts[LordCardId] = 1;
+
             runDeckInitialized = true;
         }
     }

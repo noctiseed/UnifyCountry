@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnifyCountry.Config;
+using UnifyCountry.Map;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -126,6 +127,8 @@ namespace UnifyCountry.UI
 
                 if (HasNextLevel)
                     StartNextLevel();
+                else if (RunSession.HasActiveRun)
+                    ReturnToRunMapAfterCampaign();
                 else
                     RestartRun();
             });
@@ -206,12 +209,16 @@ namespace UnifyCountry.UI
             else
                 runDeckCounts[card.CardId] = 1;
 
+            RunSession.ReplaceDeckCounts(runDeckCounts);
             rewardClaimed = true;
             AddBattleLogEntry($"奖励加入牌库：{card.CardName}。");
         }
 
         private void RestartRun()
         {
+            if (RunSession.HasActiveRun)
+                RunSession.BeginNewRun();
+
             currentLevelIndex = 0;
             runDeckInitialized = false;
             runDeckCounts.Clear();

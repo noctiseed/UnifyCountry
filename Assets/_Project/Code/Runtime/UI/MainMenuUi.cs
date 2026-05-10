@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnifyCountry.Map;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -9,7 +10,7 @@ namespace UnifyCountry.UI
     [ExecuteAlways]
     public sealed class MainMenuUi : MonoBehaviour
     {
-        private const string BattleSceneName = "SCN_BattlePrototype";
+        private const string RunMapSceneName = "SCN_RunMap";
         private const string CardCollectionSceneName = "SCN_CardCollection";
         private static readonly Color BackgroundTop = new Color(0.47f, 0.68f, 0.74f);
         private static readonly Color BackgroundBottom = new Color(0.22f, 0.36f, 0.31f);
@@ -266,7 +267,8 @@ namespace UnifyCountry.UI
 
         private void StartGame()
         {
-            SceneManager.LoadScene(BattleSceneName);
+            RunSession.BeginNewRun();
+            SceneManager.LoadScene(RunMapSceneName);
         }
 
         private void OpenCardCollection()
