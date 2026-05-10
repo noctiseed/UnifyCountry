@@ -56,7 +56,7 @@ namespace UnifyCountry.UI
             RefreshTacticalViews();
             RefreshHud();
 
-            yield return StartCoroutine(ResolveEnemyAttackRoutine(logLines));
+            yield return StartCoroutine(ResolveCombatRowsRoutine(logLines));
             if (playerBaseHp <= 0)
             {
                 logLines.Add("大本营被攻破，战斗失败。");
@@ -68,12 +68,6 @@ namespace UnifyCountry.UI
                 yield break;
             }
 
-            if (TryFinishBattleAfterBossDefeat(logLines))
-                yield break;
-
-            yield return new WaitForSeconds(0.75f);
-
-            yield return StartCoroutine(ResolvePlayerAttackRoutine(logLines));
             if (TryFinishBattleAfterBossDefeat(logLines))
                 yield break;
 
@@ -119,15 +113,42 @@ namespace UnifyCountry.UI
             TriggerPlayerTurnStartEffects(logLines);
         }
 
+        private IEnumerator ResolveCombatRowsRoutine(List<string> logLines)
+        {
+            foreach (var row in BattleFormation.GetRowsFrontToRear())
+            {
+                yield return StartCoroutine(ResolveEnemyAttackRoutine(logLines, row));
+                if (playerBaseHp <= 0 || activeBossDefeated)
+                    yield break;
+
+                yield return new WaitForSeconds(0.25f);
+
+                yield return StartCoroutine(ResolvePlayerAttackRoutine(logLines, row));
+                if (activeBossDefeated)
+                    yield break;
+
+                yield return new WaitForSeconds(0.25f);
+            }
+        }
+
         private IEnumerator ResolveEnemyAttackRoutine(List<string> logLines)
         {
-            var attackers = CollectAttackers(enemyUnits, false);
+            foreach (var row in BattleFormation.GetRowsFrontToRear())
+            {
+                yield return StartCoroutine(ResolveEnemyAttackRoutine(logLines, row));
+                if (playerBaseHp <= 0 || activeBossDefeated)
+                    yield break;
+            }
+        }
+
+        private IEnumerator ResolveEnemyAttackRoutine(List<string> logLines, int row)
+        {
+            var attackers = CollectEnemyAttackers(row);
             foreach (var attacker in attackers)
             {
                 if (attacker == null || attacker.IsDead)
                     continue;
 
-                var row = battleFormation.GetEnemyUnitRow(attacker);
                 var target = GetPlayerFrontUnit(row);
                 var healthBefore = CaptureCombatHealthSnapshot();
                 yield return StartCoroutine(PlayAttackMotion(attacker, target, target == null));
@@ -146,7 +167,17 @@ namespace UnifyCountry.UI
 
         private IEnumerator ResolvePlayerAttackRoutine(List<string> logLines)
         {
-            var attackers = CollectAttackers(playerUnits, true);
+            foreach (var row in BattleFormation.GetRowsFrontToRear())
+            {
+                yield return StartCoroutine(ResolvePlayerAttackRoutine(logLines, row));
+                if (activeBossDefeated)
+                    yield break;
+            }
+        }
+
+        private IEnumerator ResolvePlayerAttackRoutine(List<string> logLines, int row)
+        {
+            var attackers = CollectPlayerAttackers(row);
             foreach (var attacker in attackers)
             {
                 if (attacker == null || attacker.IsDead)
@@ -156,7 +187,9 @@ namespace UnifyCountry.UI
                 if (slotIndex < 0)
                     continue;
 
-                var row = GetSlotRow(slotIndex);
+                if (GetSlotRow(slotIndex) != row)
+                    continue;
+
                 var target = GetEnemyFrontUnit(row);
                 var healthBefore = CaptureCombatHealthSnapshot();
                 yield return StartCoroutine(PlayAttackMotion(attacker, target, false));
@@ -186,21 +219,18 @@ namespace UnifyCountry.UI
             return true;
         }
 
-        private List<BattleUnit> CollectAttackers(List<BattleUnit> units, bool playerSide)
+        private List<BattleUnit> CollectEnemyAttackers(int row)
         {
             var attackers = new List<BattleUnit>();
-            foreach (var row in BattleFormation.GetRowsFrontToRear())
-            {
-                if (playerSide)
-                {
-                    for (var column = MaxFormationSlots - 1; column >= 0; column--)
-                        AddAttacker(units, attackers, row, column);
-                }
-                else
-                {
-                    attackers.AddRange(battleFormation.GetAliveEnemyUnitsInRow(row));
-                }
-            }
+            attackers.AddRange(battleFormation.GetAliveEnemyUnitsInRow(row));
+            return attackers;
+        }
+
+        private List<BattleUnit> CollectPlayerAttackers(int row)
+        {
+            var attackers = new List<BattleUnit>();
+            for (var column = MaxFormationSlots - 1; column >= 0; column--)
+                AddAttacker(playerUnits, attackers, row, column);
 
             return attackers;
         }

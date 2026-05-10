@@ -68,8 +68,9 @@ namespace UnifyCountry.UI
                 : GetAttackPositionInFrontOfTarget(attackerRect, targetRect, direction, start);
 
             var sequence = DOTween.Sequence();
-            sequence.Append(attackerRect.DOLocalMove(attackPosition, AttackLungeDuration).SetEase(Ease.OutQuad));
-            sequence.Append(attackerRect.DOLocalMove(start, AttackReturnDuration).SetEase(Ease.OutBack));
+            sequence.Append(attackerRect.DOLocalMove(attackPosition, AttackLungeDuration).SetEase(Ease.OutQuad).SetTarget(attackerRect.gameObject).SetLink(attackerRect.gameObject, LinkBehaviour.KillOnDestroy));
+            sequence.Append(attackerRect.DOLocalMove(start, AttackReturnDuration).SetEase(Ease.OutBack).SetTarget(attackerRect.gameObject).SetLink(attackerRect.gameObject, LinkBehaviour.KillOnDestroy));
+            sequence.SetLink(attackerRect.gameObject, LinkBehaviour.KillOnDestroy);
             yield return sequence.WaitForCompletion();
 
             if (attackerRect != null)
@@ -108,10 +109,12 @@ namespace UnifyCountry.UI
             var flash = CreateHitFlash(targetRect, hitColor);
 
             var sequence = DOTween.Sequence();
-            sequence.Join(targetRect.DOShakeAnchorPos(HitShakeDuration, new Vector2(14f, 5f), 18, 75f, false, true));
-            sequence.Join(targetRect.DOPunchScale(Vector3.one * 0.08f, HitShakeDuration, 6, 0.7f));
+            sequence.Join(targetRect.DOShakeAnchorPos(HitShakeDuration, new Vector2(14f, 5f), 18, 75f, false, true).SetTarget(targetRect.gameObject).SetLink(targetRect.gameObject, LinkBehaviour.KillOnDestroy));
+            sequence.Join(targetRect.DOPunchScale(Vector3.one * 0.08f, HitShakeDuration, 6, 0.7f).SetTarget(targetRect.gameObject).SetLink(targetRect.gameObject, LinkBehaviour.KillOnDestroy));
             if (flash != null)
-                sequence.Join(flash.DOFade(0f, HitShakeDuration).SetEase(Ease.OutQuad));
+                sequence.Join(flash.DOFade(0f, HitShakeDuration).SetEase(Ease.OutQuad).SetTarget(flash.gameObject).SetLink(flash.gameObject, LinkBehaviour.KillOnDestroy));
+
+            sequence.SetLink(targetRect.gameObject, LinkBehaviour.KillOnDestroy);
 
             if (hpDamage > 0)
                 PlayDamageNumber(targetRect, hpDamage);
@@ -125,7 +128,10 @@ namespace UnifyCountry.UI
             }
 
             if (flash != null)
+            {
+                DOTween.Kill(flash.gameObject);
                 Destroy(flash.gameObject);
+            }
         }
 
         private CombatHealthSnapshot CaptureCombatHealthSnapshot()
@@ -268,14 +274,28 @@ namespace UnifyCountry.UI
             text.gameObject.AddComponent<Outline>().effectColor = new Color(0.28f, 0.03f, 0.02f, 0.92f);
 
             var group = text.gameObject.AddComponent<CanvasGroup>();
+            text.gameObject.AddComponent<DOTweenTargetKiller>();
             var sequence = DOTween.Sequence();
-            sequence.Join(rect.DOAnchorPos(new Vector2(0f, 34f), DamageNumberDuration).SetEase(Ease.OutCubic));
-            sequence.Join(group.DOFade(0f, DamageNumberDuration).SetEase(Ease.InQuad));
+            sequence.Join(rect.DOAnchorPos(new Vector2(0f, 34f), DamageNumberDuration).SetEase(Ease.OutCubic).SetTarget(text.gameObject).SetLink(text.gameObject, LinkBehaviour.KillOnDestroy));
+            sequence.Join(group.DOFade(0f, DamageNumberDuration).SetEase(Ease.InQuad).SetTarget(text.gameObject).SetLink(text.gameObject, LinkBehaviour.KillOnDestroy));
+            sequence.SetTarget(text.gameObject);
+            sequence.SetLink(text.gameObject, LinkBehaviour.KillOnDestroy);
             sequence.OnComplete(() =>
             {
                 if (text != null)
+                {
+                    DOTween.Kill(text.gameObject);
                     Destroy(text.gameObject);
+                }
             });
+        }
+    }
+
+    internal sealed class DOTweenTargetKiller : MonoBehaviour
+    {
+        private void OnDestroy()
+        {
+            DOTween.Kill(gameObject);
         }
     }
 }
