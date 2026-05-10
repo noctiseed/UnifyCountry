@@ -129,13 +129,12 @@ namespace UnifyCountry.UI
 
                 var row = battleFormation.GetEnemyUnitRow(attacker);
                 var target = GetPlayerFrontUnit(row);
-                var hpBefore = target != null ? target.CurrentHp : playerBaseHp;
+                var healthBefore = CaptureCombatHealthSnapshot();
                 yield return StartCoroutine(PlayAttackMotion(attacker, target, target == null));
 
                 ResolveEnemyUnitAttack(attacker, row, logLines);
                 RefreshUnitHealthViews();
-                var hpDamage = target != null ? hpBefore - target.CurrentHp : hpBefore - playerBaseHp;
-                yield return StartCoroutine(PlayHitMotion(target, target == null, hpDamage));
+                yield return StartCoroutine(PlayDamageReactions(healthBefore, target, target == null));
                 UpdateActiveTurnLog(logLines);
                 yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
                 if (playerBaseHp <= 0)
@@ -159,13 +158,12 @@ namespace UnifyCountry.UI
 
                 var row = GetSlotRow(slotIndex);
                 var target = GetEnemyFrontUnit(row);
-                var hpBefore = target != null ? target.CurrentHp : 0;
+                var healthBefore = CaptureCombatHealthSnapshot();
                 yield return StartCoroutine(PlayAttackMotion(attacker, target, false));
 
                 ResolvePlayerUnitAttack(attacker, row, logLines);
                 RefreshUnitHealthViews();
-                var hpDamage = target != null ? hpBefore - target.CurrentHp : 0;
-                yield return StartCoroutine(PlayHitMotion(target, false, hpDamage));
+                yield return StartCoroutine(PlayDamageReactions(healthBefore, target, false));
                 UpdateActiveTurnLog(logLines);
                 yield return StartCoroutine(ResolveDeathsAndAdvanceRoutine(logLines));
                 if (activeBossDefeated)
