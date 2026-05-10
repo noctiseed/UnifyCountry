@@ -39,6 +39,7 @@ namespace UnifyCountry.UI
             SetRect(status.rectTransform, new Vector2(0.18f, 0.91f), new Vector2(0.82f, 0.97f), Vector2.zero, Vector2.zero);
             statusText = status;
 
+            BuildRunMapButton(canvas.transform);
             BuildExitMenuButton(canvas.transform);
 
             var playerPanel = CreatePanel(canvas.transform, "友方阵地", playerPanelColor, false);

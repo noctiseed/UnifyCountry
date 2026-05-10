@@ -48,7 +48,7 @@ namespace UnifyCountry.Map
                 Title = "黄巾之乱",
                 Subtitle = "普通战役 3 关",
                 CampaignId = "CAMPAIGN_YELLOW_TURBAN",
-                Position = new UnityEngine.Vector2(0.1f, 0.52f),
+                Position = new UnityEngine.Vector2(0.5f, 0.94f),
                 NextNodeIds = { "NODE_BRANCH_REFUGEES", "NODE_BRANCH_MILITIA" }
             },
             new RunMapNodeDefinition
@@ -58,7 +58,7 @@ namespace UnifyCountry.Map
                 Title = "安抚流民",
                 Subtitle = "分支占位",
                 BranchEffectNote = "偏恢复、删牌、基础资源。当前仅记录路线选择。",
-                Position = new UnityEngine.Vector2(0.26f, 0.68f),
+                Position = new UnityEngine.Vector2(0.34f, 0.81f),
                 NextNodeIds = { "NODE_HULAOGUAN" }
             },
             new RunMapNodeDefinition
@@ -68,7 +68,7 @@ namespace UnifyCountry.Map
                 Title = "收编义军",
                 Subtitle = "分支占位",
                 BranchEffectNote = "偏士兵牌、随机强化、小风险收益。当前仅记录路线选择。",
-                Position = new UnityEngine.Vector2(0.26f, 0.36f),
+                Position = new UnityEngine.Vector2(0.66f, 0.81f),
                 NextNodeIds = { "NODE_HULAOGUAN" }
             },
             new RunMapNodeDefinition
@@ -78,7 +78,7 @@ namespace UnifyCountry.Map
                 Title = "虎牢关之战",
                 Subtitle = "普通战役 3 关",
                 CampaignId = "CAMPAIGN_HULAOGUAN",
-                Position = new UnityEngine.Vector2(0.42f, 0.52f),
+                Position = new UnityEngine.Vector2(0.5f, 0.68f),
                 NextNodeIds = { "NODE_BRANCH_SUPPLY", "NODE_BRANCH_RAID" }
             },
             new RunMapNodeDefinition
@@ -88,7 +88,7 @@ namespace UnifyCountry.Map
                 Title = "联军粮道",
                 Subtitle = "分支占位",
                 BranchEffectNote = "偏商店、金币、补给。当前仅记录路线选择。",
-                Position = new UnityEngine.Vector2(0.56f, 0.68f),
+                Position = new UnityEngine.Vector2(0.34f, 0.55f),
                 NextNodeIds = { "NODE_XUZHOU" }
             },
             new RunMapNodeDefinition
@@ -98,7 +98,7 @@ namespace UnifyCountry.Map
                 Title = "夜袭敌营",
                 Subtitle = "分支占位",
                 BranchEffectNote = "偏遗物、情报、高风险奖励。当前仅记录路线选择，不触发战斗。",
-                Position = new UnityEngine.Vector2(0.56f, 0.36f),
+                Position = new UnityEngine.Vector2(0.66f, 0.55f),
                 NextNodeIds = { "NODE_XUZHOU" }
             },
             new RunMapNodeDefinition
@@ -108,7 +108,7 @@ namespace UnifyCountry.Map
                 Title = "徐州攻防战",
                 Subtitle = "普通战役 3 关",
                 CampaignId = "CAMPAIGN_XUZHOU",
-                Position = new UnityEngine.Vector2(0.7f, 0.52f),
+                Position = new UnityEngine.Vector2(0.5f, 0.42f),
                 NextNodeIds = { "NODE_BRANCH_DEFEND", "NODE_BRANCH_CHASE" }
             },
             new RunMapNodeDefinition
@@ -118,7 +118,7 @@ namespace UnifyCountry.Map
                 Title = "固守城池",
                 Subtitle = "分支占位",
                 BranchEffectNote = "偏最大生命、护甲、防御构筑。当前仅记录路线选择。",
-                Position = new UnityEngine.Vector2(0.82f, 0.68f),
+                Position = new UnityEngine.Vector2(0.34f, 0.29f),
                 NextNodeIds = { "NODE_LVBU" }
             },
             new RunMapNodeDefinition
@@ -128,7 +128,7 @@ namespace UnifyCountry.Map
                 Title = "追击吕布",
                 Subtitle = "分支占位",
                 BranchEffectNote = "偏攻击牌、灼烧、爆发构筑。当前仅记录路线选择。",
-                Position = new UnityEngine.Vector2(0.82f, 0.36f),
+                Position = new UnityEngine.Vector2(0.66f, 0.29f),
                 NextNodeIds = { "NODE_LVBU" }
             },
             new RunMapNodeDefinition
@@ -138,7 +138,7 @@ namespace UnifyCountry.Map
                 Title = "大战吕布",
                 Subtitle = "最终 Boss 战 1 关",
                 CampaignId = "CAMPAIGN_LVBU",
-                Position = new UnityEngine.Vector2(0.94f, 0.52f)
+                Position = new UnityEngine.Vector2(0.5f, 0.12f)
             }
         };
 

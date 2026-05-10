@@ -21,6 +21,8 @@ namespace UnifyCountry.UI
         private static readonly Color BranchColor = new Color(0.24f, 0.44f, 0.32f);
         private static readonly Color CompletedColor = new Color(0.55f, 0.54f, 0.44f);
         private static readonly Color LockedColor = new Color(0.2f, 0.2f, 0.2f, 0.4f);
+        private const float MapContentWidth = 1280f;
+        private const float MapContentHeight = 1360f;
 
         [SerializeField] private Font uiFont;
 
@@ -150,14 +152,14 @@ namespace UnifyCountry.UI
 
         private void BuildHeader(Transform parent)
         {
-            var title = CreateText(parent, "远征路线", 44, TextAnchor.MiddleLeft, Color.white);
+            var title = CreateText(parent, "行军路线", 44, TextAnchor.MiddleLeft, Color.white);
             title.fontStyle = FontStyle.Bold;
             SetRect(title.rectTransform, new Vector2(0.06f, 0.88f), new Vector2(0.38f, 0.97f), Vector2.zero, Vector2.zero);
             AddShadow(title.gameObject, new Color(0f, 0f, 0f, 0.55f), new Vector2(3f, -3f));
 
             var status = RunSession.HasActiveRun && RunSession.Current.IsRunComplete
                 ? "吕布已破，天下震动"
-                : "选择可用节点推进当前 Run";
+                : string.Empty;
             var subtitle = CreateText(parent, status, 22, TextAnchor.MiddleLeft, new Color(0.95f, 0.88f, 0.66f));
             SetRect(subtitle.rectTransform, new Vector2(0.28f, 0.885f), new Vector2(0.68f, 0.95f), Vector2.zero, Vector2.zero);
 
@@ -182,8 +184,32 @@ namespace UnifyCountry.UI
             SetRect(panel.rectTransform, new Vector2(0.055f, 0.18f), new Vector2(0.945f, 0.85f), Vector2.zero, Vector2.zero);
             CreateBorder(panel.transform, new Color(0.3f, 0.18f, 0.08f), 4f);
 
-            BuildRouteLines(panel.transform);
-            BuildNodes(panel.transform);
+            var viewport = CreateImage(panel.transform, "Viewport", Color.clear);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            SetRect(viewport.rectTransform, new Vector2(0.025f, 0.035f), new Vector2(0.955f, 0.965f), Vector2.zero, Vector2.zero);
+
+            var contentObject = new GameObject("Map Content", typeof(RectTransform));
+            contentObject.transform.SetParent(viewport.transform, false);
+            var content = contentObject.GetComponent<RectTransform>();
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = new Vector2(0f, MapContentHeight);
+
+            BuildRouteLines(content);
+            BuildNodes(content);
+
+            var scrollRect = panel.gameObject.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 42f;
+            scrollRect.viewport = viewport.rectTransform;
+            scrollRect.content = content;
+            scrollRect.verticalScrollbar = CreateMapScrollbar(panel.transform);
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+            scrollRect.verticalNormalizedPosition = 1f;
         }
 
         private void BuildRouteLines(Transform parent)
@@ -225,9 +251,9 @@ namespace UnifyCountry.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
 
             var delta = to - from;
-            var length = Mathf.Sqrt(delta.x * delta.x * 1100f * 1100f + delta.y * delta.y * 560f * 560f);
+            var length = Mathf.Sqrt(delta.x * delta.x * MapContentWidth * MapContentWidth + delta.y * delta.y * MapContentHeight * MapContentHeight);
             rect.sizeDelta = new Vector2(length, 8f);
-            rect.localEulerAngles = new Vector3(0f, 0f, Mathf.Atan2(delta.y * 560f, delta.x * 1100f) * Mathf.Rad2Deg);
+            rect.localEulerAngles = new Vector3(0f, 0f, Mathf.Atan2(delta.y * MapContentHeight, delta.x * MapContentWidth) * Mathf.Rad2Deg);
         }
 
         private void BuildNodes(Transform parent)
@@ -262,13 +288,19 @@ namespace UnifyCountry.UI
 
             var title = CreateText(root.transform, node.Title, isCampaign ? 24 : 20, TextAnchor.MiddleCenter, Color.white);
             title.fontStyle = FontStyle.Bold;
-            SetRect(title.rectTransform, new Vector2(0.06f, 0.42f), new Vector2(0.94f, 0.9f), Vector2.zero, Vector2.zero);
+            if (state == RunMapNodeState.Available)
+                SetRect(title.rectTransform, new Vector2(0.06f, 0.08f), new Vector2(0.94f, 0.92f), Vector2.zero, Vector2.zero);
+            else
+                SetRect(title.rectTransform, new Vector2(0.06f, 0.42f), new Vector2(0.94f, 0.9f), Vector2.zero, Vector2.zero);
 
-            var subtitle = CreateText(root.transform, GetNodeSubtitle(node, state), 15, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.68f));
-            SetRect(subtitle.rectTransform, new Vector2(0.06f, 0.1f), new Vector2(0.94f, 0.42f), Vector2.zero, Vector2.zero);
+            if (state != RunMapNodeState.Available)
+            {
+                var subtitle = CreateText(root.transform, GetNodeSubtitle(state), 15, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.68f));
+                SetRect(subtitle.rectTransform, new Vector2(0.06f, 0.1f), new Vector2(0.94f, 0.42f), Vector2.zero, Vector2.zero);
+            }
         }
 
-        private static string GetNodeSubtitle(RunMapNodeDefinition node, RunMapNodeState state)
+        private static string GetNodeSubtitle(RunMapNodeState state)
         {
             if (state == RunMapNodeState.Completed)
                 return "已完成";
@@ -276,7 +308,7 @@ namespace UnifyCountry.UI
             if (state == RunMapNodeState.Locked)
                 return "未解锁";
 
-            return node.Subtitle;
+            return string.Empty;
         }
 
         private void SelectNode(string nodeId)
@@ -307,8 +339,6 @@ namespace UnifyCountry.UI
             var text = CreateText(footer.transform, routeText, 20, TextAnchor.MiddleLeft, new Color(0.95f, 0.86f, 0.66f));
             SetRect(text.rectTransform, new Vector2(0.025f, 0.18f), new Vector2(0.62f, 0.82f), Vector2.zero, Vector2.zero);
 
-            var tip = CreateText(footer.transform, "分支节点当前只记录选择，后续可接恢复、商店、删牌、遗物等奖励。", 19, TextAnchor.MiddleRight, new Color(0.88f, 0.78f, 0.58f));
-            SetRect(tip.rectTransform, new Vector2(0.42f, 0.18f), new Vector2(0.975f, 0.82f), Vector2.zero, Vector2.zero);
         }
 
         private Button CreateButton(Transform parent, string label)
@@ -325,6 +355,26 @@ namespace UnifyCountry.UI
             text.fontStyle = FontStyle.Bold;
             SetRect(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             return button;
+        }
+
+        private Scrollbar CreateMapScrollbar(Transform parent)
+        {
+            var scrollbarRoot = CreateImage(parent, "Map Scrollbar", new Color(0.32f, 0.22f, 0.14f, 0.2f));
+            SetRect(scrollbarRoot.rectTransform, new Vector2(0.975f, 0.04f), new Vector2(0.985f, 0.96f), Vector2.zero, Vector2.zero);
+
+            var slidingArea = new GameObject("Sliding Area", typeof(RectTransform));
+            slidingArea.transform.SetParent(scrollbarRoot.transform, false);
+            var slidingRect = slidingArea.GetComponent<RectTransform>();
+            SetRect(slidingRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            var handle = CreateImage(slidingArea.transform, "Handle", new Color(0.54f, 0.36f, 0.2f, 0.82f));
+            SetRect(handle.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            var scrollbar = scrollbarRoot.gameObject.AddComponent<Scrollbar>();
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.targetGraphic = handle;
+            scrollbar.handleRect = handle.rectTransform;
+            return scrollbar;
         }
 
         private Image CreateImage(Transform parent, string name, Color color)
