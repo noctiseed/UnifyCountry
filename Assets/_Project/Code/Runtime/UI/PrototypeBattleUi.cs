@@ -93,6 +93,7 @@ namespace UnifyCountry.UI
         private Transform playerBattleContent;
         private Transform enemyBattleContent;
         private Transform handContent;
+        private RectTransform playerBaseView;
         private bool initialized;
         private bool isResolvingTurn;
         private bool battleEnded;

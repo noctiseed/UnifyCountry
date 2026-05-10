@@ -112,6 +112,7 @@ namespace UnifyCountry.UI
         private void BuildPlayerBase(Transform parent)
         {
             var root = CreateImage(parent, "大本营", new Color(0.88f, 0.72f, 0.42f));
+            playerBaseView = root.rectTransform;
             SetRect(root.rectTransform, new Vector2(0.34f, 0.88f), new Vector2(0.66f, 0.98f), Vector2.zero, Vector2.zero);
 
             var outline = root.gameObject.AddComponent<Outline>();

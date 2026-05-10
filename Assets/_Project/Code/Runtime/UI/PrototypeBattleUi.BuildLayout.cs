@@ -22,6 +22,7 @@ namespace UnifyCountry.UI
             playerBattleContent = null;
             enemyBattleContent = null;
             handContent = null;
+            playerBaseView = null;
             ClearChildren();
             unitViews.Clear();
 
@@ -159,6 +160,7 @@ namespace UnifyCountry.UI
         private void RefreshTacticalViews()
         {
             unitViews.Clear();
+            playerBaseView = null;
             ResetSkillTargetHandlers();
 
             ClearChildren(playerBattleContent);
