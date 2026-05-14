@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnifyCountry.Config;
+using UnifyCountry.Roguelike;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -28,6 +29,12 @@ namespace UnifyCountry.UI
             Skill
         }
 
+        private enum CollectionTab
+        {
+            Cards,
+            Relics
+        }
+
         private const string MainMenuSceneName = "SCN_MainMenu";
         private static readonly Vector2 ReferenceResolution = new Vector2(1600f, 900f);
         private static readonly Color BackgroundColor = new Color(0.18f, 0.28f, 0.25f);
@@ -39,6 +46,10 @@ namespace UnifyCountry.UI
         private static readonly Color EnemyColor = new Color(0.94f, 0.55f, 0.5f);
         private static readonly Color NeutralColor = new Color(0.77f, 0.82f, 0.88f);
         private static readonly Color SkillColor = new Color(0.73f, 0.78f, 0.95f);
+        private static readonly Color RelicResourceColor = new Color(0.94f, 0.72f, 0.32f);
+        private static readonly Color RelicSustainColor = new Color(0.54f, 0.78f, 0.62f);
+        private static readonly Color RelicCounterColor = new Color(0.38f, 0.58f, 0.32f);
+        private static readonly Color RelicEntryColor = new Color(0.88f, 0.42f, 0.22f);
 
         [Header("Config")]
         [SerializeField] private TextAsset cardsCsv;
@@ -58,6 +69,7 @@ namespace UnifyCountry.UI
         private RectTransform gridRoot;
         private Text countText;
         private CardFilter currentFilter = CardFilter.All;
+        private CollectionTab currentTab = CollectionTab.Cards;
 
         private void Awake()
         {
@@ -76,6 +88,9 @@ namespace UnifyCountry.UI
         {
             EnsureFont();
             ClearChildren(transform);
+            filterRoot = null;
+            gridRoot = null;
+            countText = null;
             EnsureCamera();
             EnsureEventSystem();
             LoadData();
@@ -83,7 +98,7 @@ namespace UnifyCountry.UI
             var canvas = CreateCanvas();
             BuildBackground(canvas.transform);
             BuildPanel(canvas.transform);
-            RebuildCards();
+            RebuildCollection();
         }
 
         private void EnsureFont()
@@ -135,8 +150,41 @@ namespace UnifyCountry.UI
             var backButton = CreateButton(panel.transform, "\u8fd4\u56de", new Color(0.78f, 0.23f, 0.16f), LoadMainMenu);
             SetRect(backButton.GetComponent<RectTransform>(), new Vector2(0.89f, 0.905f), new Vector2(0.965f, 0.975f));
 
+            BuildTabs(panel.transform);
             BuildFilters(panel.transform);
             BuildScrollGrid(panel.transform);
+        }
+
+        private void BuildTabs(Transform parent)
+        {
+            var tabRootObject = new GameObject("Collection Tabs", typeof(RectTransform));
+            tabRootObject.transform.SetParent(parent, false);
+            var tabRoot = tabRootObject.GetComponent<RectTransform>();
+            SetRect(tabRoot, new Vector2(0.04f, 0.045f), new Vector2(0.145f, 0.79f));
+
+            var cardButton = CreateTabButton(tabRoot, "卡牌", CollectionTab.Cards);
+            SetRect(cardButton.GetComponent<RectTransform>(), new Vector2(0f, 0.86f), new Vector2(1f, 0.98f));
+
+            var relicButton = CreateTabButton(tabRoot, "遗物", CollectionTab.Relics);
+            SetRect(relicButton.GetComponent<RectTransform>(), new Vector2(0f, 0.72f), new Vector2(1f, 0.84f));
+        }
+
+        private Button CreateTabButton(Transform parent, string label, CollectionTab tab)
+        {
+            var selected = currentTab == tab;
+            var button = CreateButton(parent, label, selected ? new Color(0.84f, 0.36f, 0.12f) : new Color(0.44f, 0.3f, 0.16f), () =>
+            {
+                if (currentTab == tab)
+                    return;
+
+                currentTab = tab;
+                Build();
+            });
+
+            if (selected)
+                AddOutline(button.gameObject, new Color(1f, 0.86f, 0.42f), new Vector2(4f, -4f));
+
+            return button;
         }
 
         private void BuildFilters(Transform parent)
@@ -146,10 +194,13 @@ namespace UnifyCountry.UI
                 var filterObject = new GameObject("Filters", typeof(RectTransform));
                 filterObject.transform.SetParent(parent, false);
                 filterRoot = filterObject.GetComponent<RectTransform>();
-                SetRect(filterRoot, new Vector2(0.04f, 0.815f), new Vector2(0.62f, 0.885f));
+                SetRect(filterRoot, new Vector2(0.17f, 0.815f), new Vector2(0.75f, 0.885f));
             }
 
             ClearChildren(filterRoot);
+
+            if (currentTab == CollectionTab.Relics)
+                return;
 
             var filters = new[]
             {
@@ -169,7 +220,7 @@ namespace UnifyCountry.UI
                 {
                     currentFilter = filter.Item1;
                     BuildFilters(filterRoot.parent);
-                    RebuildCards();
+                    RebuildCollection();
                 });
                 SetRect(button.GetComponent<RectTransform>(), new Vector2(xMin, 0f), new Vector2(xMin + 0.136f, 1f));
             }
@@ -197,7 +248,7 @@ namespace UnifyCountry.UI
             var viewportImage = CreateImage(parent, "Card Viewport", PanelInnerColor);
             viewportImage.sprite = GetRoundedSprite();
             viewportImage.type = Image.Type.Sliced;
-            SetRect(viewportImage.rectTransform, new Vector2(0.035f, 0.045f), new Vector2(0.965f, 0.79f));
+            SetRect(viewportImage.rectTransform, new Vector2(0.17f, 0.045f), new Vector2(0.965f, 0.79f));
             AddOutline(viewportImage.gameObject, new Color(0.36f, 0.23f, 0.12f, 0.9f), new Vector2(2f, -2f));
 
             var mask = viewportImage.gameObject.AddComponent<Mask>();
@@ -217,7 +268,7 @@ namespace UnifyCountry.UI
             grid.cellSize = new Vector2(215f, 318f);
             grid.spacing = new Vector2(20f, 20f);
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 5;
+            grid.constraintCount = 4;
 
             var fitter = contentObject.GetComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -229,6 +280,17 @@ namespace UnifyCountry.UI
             scroll.vertical = true;
             scroll.movementType = ScrollRect.MovementType.Clamped;
             scroll.scrollSensitivity = 32f;
+        }
+
+        private void RebuildCollection()
+        {
+            if (currentTab == CollectionTab.Relics)
+            {
+                RebuildRelics();
+                return;
+            }
+
+            RebuildCards();
         }
 
         private void RebuildCards()
@@ -250,6 +312,24 @@ namespace UnifyCountry.UI
 
             foreach (var card in visibleCards)
                 CreateCardView(gridRoot, card);
+        }
+
+        private void RebuildRelics()
+        {
+            if (gridRoot == null)
+                return;
+
+            ClearChildren(gridRoot);
+
+            var relics = RunRelicRules.Catalog
+                .OrderBy(relic => relic.RelicId)
+                .ToList();
+
+            if (countText != null)
+                countText.text = string.Format("共 {0} 件遗物", relics.Count);
+
+            foreach (var relic in relics)
+                CreateRelicView(gridRoot, relic);
         }
 
         private bool MatchesFilter(CardRecord card)
@@ -311,6 +391,35 @@ namespace UnifyCountry.UI
 
             var description = CreateDescriptionScroll(root.transform, GetEffectLine(card));
             SetRect(description, new Vector2(0.08f, 0.07f), new Vector2(0.92f, 0.29f));
+        }
+
+        private void CreateRelicView(Transform parent, RunRelicDefinition relic)
+        {
+            var root = CreateImage(parent, relic.RelicId, GetRelicColor(relic.Category));
+            root.sprite = GetRoundedSprite();
+            root.type = Image.Type.Sliced;
+            AddOutline(root.gameObject, new Color(0.17f, 0.1f, 0.06f), new Vector2(3f, -3f));
+
+            var id = CreateText(root.transform, relic.RelicId.Replace("RELIC_", string.Empty), 18, TextAnchor.MiddleLeft, new Color(1f, 0.94f, 0.76f));
+            id.fontStyle = FontStyle.Bold;
+            SetRect(id.rectTransform, new Vector2(0.08f, 0.87f), new Vector2(0.32f, 0.965f));
+
+            var name = CreateText(root.transform, relic.Name, 24, TextAnchor.MiddleCenter, Color.white);
+            name.fontStyle = FontStyle.Bold;
+            SetRect(name.rectTransform, new Vector2(0.2f, 0.84f), new Vector2(0.94f, 0.965f));
+
+            var icon = CreateImage(root.transform, "Relic Icon", new Color(1f, 0.92f, 0.66f, 0.78f));
+            icon.sprite = GetRoundedSprite();
+            icon.type = Image.Type.Sliced;
+            SetRect(icon.rectTransform, new Vector2(0.22f, 0.48f), new Vector2(0.78f, 0.79f));
+            AddOutline(icon.gameObject, new Color(0.34f, 0.2f, 0.08f, 0.75f), new Vector2(2f, -2f));
+
+            var iconText = CreateText(icon.transform, relic.IconText, 54, TextAnchor.MiddleCenter, new Color(0.24f, 0.12f, 0.04f));
+            iconText.fontStyle = FontStyle.Bold;
+            SetStretch(iconText.rectTransform);
+
+            var description = CreateDescriptionScroll(root.transform, relic.EffectText);
+            SetRect(description, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.43f));
         }
 
         private RectTransform CreateDescriptionScroll(Transform parent, string content)
@@ -428,6 +537,23 @@ namespace UnifyCountry.UI
                     return PlayerColor;
                 case CardCamp.Enemy:
                     return EnemyColor;
+                default:
+                    return NeutralColor;
+            }
+        }
+
+        private static Color GetRelicColor(RunRelicCategory category)
+        {
+            switch (category)
+            {
+                case RunRelicCategory.Resource:
+                    return RelicResourceColor;
+                case RunRelicCategory.Sustain:
+                    return RelicSustainColor;
+                case RunRelicCategory.Counter:
+                    return RelicCounterColor;
+                case RunRelicCategory.Entry:
+                    return RelicEntryColor;
                 default:
                     return NeutralColor;
             }

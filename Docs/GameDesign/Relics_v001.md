@@ -2,7 +2,7 @@
 
 ## Current Scope
 
-第一批遗物已实现战斗功能，但暂未接入玩家获得方式和展示 UI。
+第一批遗物已实现战斗功能，并已接入“卧虎藏龙”图鉴页展示。暂未接入玩家获得方式。
 
 当前遗物通过 `RunSession.Current.RelicIds` 持有。后续奖励、事件、商店或调试入口只需要向当前 Run 添加对应遗物 ID，即可在之后的战斗中生效。
 
@@ -11,7 +11,17 @@
 ```text
 Assets/_Project/Code/Runtime/Roguelike/RunRelics.cs
 Assets/_Project/Code/Runtime/Map/RunSession.cs
+Assets/_Project/Code/Runtime/UI/CardCollectionUi.cs
 ```
+
+“卧虎藏龙”页面当前使用左侧一级页签切换：
+
+```text
+卡牌
+遗物
+```
+
+卡牌页保留原有卡牌筛选；遗物页展示当前 5 个遗物的静态定义。
 
 ## Relic List
 
@@ -108,7 +118,6 @@ WaveEntryBurn += 1
 ## Future Work
 
 - 接入遗物获得入口。
-- 接入遗物展示 UI。
 - 将遗物定义数据化到 CSV 或 ScriptableObject。
 - 为遗物触发增加更明确的战斗表现，例如飘字、图标闪烁、特效。
 - 增加遗物数据校验。
