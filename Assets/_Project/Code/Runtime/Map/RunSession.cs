@@ -227,6 +227,14 @@ namespace UnifyCountry.Map
                 Current.DeckCounts[entry.Key] = entry.Value;
         }
 
+        public static void GrantRelic(string relicId)
+        {
+            if (Current == null || string.IsNullOrWhiteSpace(relicId) || Current.RelicIds.Contains(relicId))
+                return;
+
+            Current.RelicIds.Add(relicId);
+        }
+
         public static void CompleteActiveCampaign()
         {
             if (Current == null)

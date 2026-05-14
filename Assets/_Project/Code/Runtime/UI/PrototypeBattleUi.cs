@@ -4,6 +4,7 @@ using System.Linq;
 using UnifyCountry.Combat;
 using UnifyCountry.Config;
 using UnifyCountry.Map;
+using UnifyCountry.Roguelike;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -108,6 +109,7 @@ namespace UnifyCountry.UI
         private bool activeBossDefeated;
         private int selectedRewardIndex = -1;
         private SettlementStep settlementStep = SettlementStep.Result;
+        private bool firstUnitCardDrawRelicTriggeredThisTurn;
 
         private enum SettlementStep
         {
@@ -136,6 +138,7 @@ namespace UnifyCountry.UI
             selectedRewardIndex = -1;
             settlementRewardOptions.Clear();
             settlementStep = SettlementStep.Result;
+            firstUnitCardDrawRelicTriggeredThisTurn = false;
             initialized = false;
             battleLogText = null;
             InitializeBattle();
@@ -177,6 +180,7 @@ namespace UnifyCountry.UI
         private void InitializeBattle()
         {
             EnsureBattleSystems();
+            ApplyRunRelicModifiers();
 
             if (uiFont == null)
                 uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -223,6 +227,7 @@ namespace UnifyCountry.UI
             nextWaveIndex = 0;
             currentEnergy = InitialPrepareEnergy;
             battlePhase = BattlePhase.InitialPrepare;
+            firstUnitCardDrawRelicTriggeredThisTurn = false;
             Shuffle(drawPile);
             DrawInitialHand();
             AddBattleLogEntry($"准备阶段：获得 {InitialPrepareEnergy} 点费用，英雄卡优先进入初始手牌，补足 {InitialHandSize} 张。");
@@ -254,6 +259,27 @@ namespace UnifyCountry.UI
                 runDeckCounts[LordCardId] = 1;
 
             runDeckInitialized = true;
+        }
+
+        private void ApplyRunRelicModifiers()
+        {
+            battleState.FormalTurnMaxEnergyBonus = 0;
+            battleState.DrawOnFirstUnitCardEachTurn = false;
+            battleState.RevivalHealBonusPerStack = 0;
+            battleState.ThornsDamageBonusPerStack = 0;
+            battleState.WaveEntryDamage = 0;
+            battleState.WaveEntryBurn = 0;
+
+            if (!RunSession.HasActiveRun)
+                return;
+
+            var modifiers = RunRelicRules.BuildModifiers(RunSession.Current.RelicIds);
+            battleState.FormalTurnMaxEnergyBonus = modifiers.FormalTurnMaxEnergyBonus;
+            battleState.DrawOnFirstUnitCardEachTurn = modifiers.DrawOnFirstUnitCardEachTurn;
+            battleState.RevivalHealBonusPerStack = modifiers.RevivalHealBonusPerStack;
+            battleState.ThornsDamageBonusPerStack = modifiers.ThornsDamageBonusPerStack;
+            battleState.WaveEntryDamage = modifiers.WaveEntryDamage;
+            battleState.WaveEntryBurn = modifiers.WaveEntryBurn;
         }
     }
 }

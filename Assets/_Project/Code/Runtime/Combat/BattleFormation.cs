@@ -286,8 +286,8 @@ namespace UnifyCountry.Combat
 
         public void ResolveEndOfTurnBuffs(List<string> logLines)
         {
-            ResolveEndOfTurnBuffs(state.PlayerUnits, logLines);
-            ResolveEndOfTurnBuffs(state.EnemyUnits, logLines);
+            ResolveEndOfTurnBuffs(state.PlayerUnits, state.RevivalHealBonusPerStack, logLines);
+            ResolveEndOfTurnBuffs(state.EnemyUnits, 0, logLines);
         }
 
         public bool RemoveDeadUnitsFromFormation(List<string> logLines)
@@ -432,7 +432,7 @@ namespace UnifyCountry.Combat
                 state.PlayerUnits[GetSlotIndex(row, column)] = state.PlayerUnits[GetSlotIndex(row, column + 1)];
         }
 
-        private static void ResolveEndOfTurnBuffs(List<BattleUnit> units, List<string> logLines)
+        private static void ResolveEndOfTurnBuffs(List<BattleUnit> units, int revivalHealBonusPerStack, List<string> logLines)
         {
             for (var i = 0; i < units.Count; i++)
             {
@@ -451,7 +451,7 @@ namespace UnifyCountry.Combat
                 if (unit.Revival > 0 && !unit.IsDead)
                 {
                     var revivalBefore = unit.Revival;
-                    var healed = unit.ResolveRevival();
+                    var healed = unit.ResolveRevival(revivalHealBonusPerStack);
                     logLines.Add($"{unit.Name} 触发复苏 {revivalBefore}，恢复 {healed} 点生命，复苏降为 {unit.Revival}。");
                 }
 

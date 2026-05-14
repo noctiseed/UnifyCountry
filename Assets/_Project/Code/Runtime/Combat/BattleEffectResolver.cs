@@ -392,7 +392,8 @@ namespace UnifyCountry.Combat
             if (!triggerThorns || source == null || target == null || source.IsDead || source.Camp == target.Camp || target.Thorns <= 0)
                 return;
 
-            var thornsDamage = target.Thorns;
+            var thornsBonusPerStack = target.Camp == CardCamp.Player ? state.ThornsDamageBonusPerStack : 0;
+            var thornsDamage = target.Thorns * (1 + Mathf.Max(0, thornsBonusPerStack));
             DealDamage(null, source, thornsDamage, row, logLines, $"{target.Name} 的荆棘反伤 {source.Name}", true);
         }
 

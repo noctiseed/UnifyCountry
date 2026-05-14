@@ -12,6 +12,35 @@ namespace UnifyCountry.UI
             var wave = CurrentWaves != null && waveIndex >= 0 && waveIndex < CurrentWaves.Count ? CurrentWaves[waveIndex] : null;
             var spawnedUnits = battleEffectResolver.SpawnCurrentWave(CurrentWaves, logLines);
             TrackBossWave(wave, spawnedUnits);
+            ApplyWaveEntryRelics(spawnedUnits, logLines);
+        }
+
+        private void ApplyWaveEntryRelics(List<BattleUnit> spawnedUnits, List<string> logLines)
+        {
+            if (spawnedUnits == null || spawnedUnits.Count == 0)
+                return;
+
+            var hasFireOx = battleState.WaveEntryDamage > 0 || battleState.WaveEntryBurn > 0;
+            if (!hasFireOx)
+                return;
+
+            foreach (var unit in spawnedUnits)
+            {
+                if (unit == null || unit.IsDead)
+                    continue;
+
+                var row = battleFormation.GetEnemyUnitRow(unit);
+                if (battleState.WaveEntryDamage > 0)
+                    battleEffectResolver.DealDamage(null, unit, battleState.WaveEntryDamage, row, logLines, $"火牛阵图冲击 {unit.Name}", false);
+
+                if (battleState.WaveEntryBurn > 0 && !unit.IsDead)
+                    unit.AddBurn(battleState.WaveEntryBurn);
+            }
+
+            if (battleState.WaveEntryBurn > 0)
+                logLines.Add($"火牛阵图触发：本波敌人获得 {battleState.WaveEntryBurn} 层灼烧。");
+
+            battleFormation.RemoveDeadUnitsFromFormation(logLines);
         }
 
         private void ResolveEnemyAttack(List<string> logLines)

@@ -154,13 +154,13 @@ namespace UnifyCountry.Combat
             AddBuff(BattleBuffType.Thorns, stacks);
         }
 
-        public int ResolveRevival()
+        public int ResolveRevival(int healBonusPerStack = 0)
         {
             var buff = GetBuff(BattleBuffType.Revival);
             if (buff == null || buff.Stacks <= 0 || IsDead)
                 return 0;
 
-            var healAmount = buff.Stacks;
+            var healAmount = buff.Stacks * (1 + Mathf.Max(0, healBonusPerStack));
             var hpBefore = CurrentHp;
             Heal(healAmount);
             buff.Stacks = Mathf.Max(0, buff.Stacks - 1);

@@ -58,6 +58,7 @@ namespace UnifyCountry.UI
 
             var logLines = new List<string> { $"{card.CardName} 上阵，消耗 {card.Cost} 点费用。" };
             TriggerEffects(unit, "OnPlay", GetSlotRow(insertIndex), null, logLines);
+            TryTriggerFirstUnitCardDrawRelic(logLines);
             CommitTurnLog(logLines);
             RefreshTacticalViews();
             RefreshHud();
@@ -101,6 +102,7 @@ namespace UnifyCountry.UI
             var slotIndex = GetUnitSlotIndex(playerUnits, unit);
             var logLines = new List<string> { $"{card.CardName} 插入阵地，消耗 {card.Cost} 点费用。" };
             TriggerEffects(unit, "OnPlay", slotIndex >= 0 ? GetSlotRow(slotIndex) : DecodeGapRow(gapIndex), null, logLines);
+            TryTriggerFirstUnitCardDrawRelic(logLines);
             CommitTurnLog(logLines);
             RefreshTacticalViews();
             RefreshHud();
@@ -137,6 +139,19 @@ namespace UnifyCountry.UI
         private int CountEnemyUnits()
         {
             return battleFormation.CountEnemyUnits();
+        }
+
+        private void TryTriggerFirstUnitCardDrawRelic(List<string> logLines)
+        {
+            if (battlePhase != BattlePhase.PlayerAction || !battleState.DrawOnFirstUnitCardEachTurn || firstUnitCardDrawRelicTriggeredThisTurn)
+                return;
+
+            firstUnitCardDrawRelicTriggeredThisTurn = true;
+            var drawn = DrawCardsWithCount(1);
+            if (drawn > 0)
+                logLines.Add($"铁甲军令触发：本回合第一次打出单位牌，抽 {drawn} 张牌。");
+            else
+                logLines.Add("铁甲军令触发：本回合第一次打出单位牌，但抽牌堆没有可抽的牌。");
         }
     }
 }

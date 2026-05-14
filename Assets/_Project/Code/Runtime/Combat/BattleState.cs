@@ -27,6 +27,12 @@ namespace UnifyCountry.Combat
         public int CurrentEnergy { get; set; }
         public int PlayerBaseHp { get; set; }
         public BattlePhase BattlePhase { get; set; } = BattlePhase.InitialPrepare;
+        public int FormalTurnMaxEnergyBonus { get; set; }
+        public bool DrawOnFirstUnitCardEachTurn { get; set; }
+        public int RevivalHealBonusPerStack { get; set; }
+        public int ThornsDamageBonusPerStack { get; set; }
+        public int WaveEntryDamage { get; set; }
+        public int WaveEntryBurn { get; set; }
 
         public BattleLevelRecord CurrentLevel => Levels.Count == 0 ? null : Levels[CurrentLevelIndex];
         public List<WaveSpawnRecord> CurrentWaves => CurrentLevel == null ? null : CurrentLevel.Waves;

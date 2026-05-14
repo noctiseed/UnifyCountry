@@ -107,9 +107,11 @@ namespace UnifyCountry.UI
 
             SpawnCurrentWave(logLines);
 
-            currentEnergy = MaxEnergy;
+            firstUnitCardDrawRelicTriggeredThisTurn = false;
+            var maxEnergyThisTurn = GetMaxEnergyThisTurn();
+            currentEnergy = maxEnergyThisTurn;
             var drawCount = DrawCardsWithCount(CardsDrawnPerTurn);
-            logLines.Add($"进入第 {turnNumber} 回合：敌方单位进场后暂不攻击，费用恢复到 {MaxEnergy}，从抽牌堆抽 {drawCount} 张牌。");
+            logLines.Add($"进入第 {turnNumber} 回合：敌方单位进场后暂不攻击，费用恢复到 {maxEnergyThisTurn}，从抽牌堆抽 {drawCount} 张牌。");
             TriggerPlayerTurnStartEffects(logLines);
         }
 
@@ -255,6 +257,13 @@ namespace UnifyCountry.UI
         private int DrawCardsWithCount(int count)
         {
             return battleDeck.DrawCardsWithCount(count);
+        }
+
+        private int GetMaxEnergyThisTurn()
+        {
+            return battlePhase == BattlePhase.InitialPrepare
+                ? InitialPrepareEnergy
+                : MaxEnergy + battleState.FormalTurnMaxEnergyBonus;
         }
 
         private void AddBattleLogEntry(string line)

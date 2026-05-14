@@ -46,6 +46,7 @@ namespace UnifyCountry.Map
         public readonly HashSet<string> CompletedNodeIds = new HashSet<string>();
         public readonly HashSet<string> AvailableNodeIds = new HashSet<string>();
         public readonly Dictionary<string, int> DeckCounts = new Dictionary<string, int>();
+        public readonly List<string> RelicIds = new List<string>();
         public readonly List<string> RouteHistory = new List<string>();
     }
 }

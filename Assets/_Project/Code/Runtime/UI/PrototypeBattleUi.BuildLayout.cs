@@ -60,7 +60,7 @@ namespace UnifyCountry.UI
             SetRect(drawPilePanel.GetComponent<RectTransform>(), new Vector2(0.095f, 0.03f), new Vector2(0.16f, 0.28f), Vector2.zero, Vector2.zero);
             drawPileCountText = GetInfoBlockValueText(drawPilePanel.transform);
 
-            var maxEnergyThisTurn = battlePhase == BattlePhase.InitialPrepare ? InitialPrepareEnergy : MaxEnergy;
+            var maxEnergyThisTurn = GetMaxEnergyThisTurn();
             var energyPanel = CreateInfoBlock(canvas.transform, "费用", $"{currentEnergy}/{maxEnergyThisTurn}", new Color(0.98f, 0.8f, 0.38f));
             SetRect(energyPanel, new Vector2(0.17f, 0.03f), new Vector2(0.235f, 0.28f), Vector2.zero, Vector2.zero);
             energyCountText = GetInfoBlockValueText(energyPanel.transform);
@@ -152,7 +152,7 @@ namespace UnifyCountry.UI
                 discardPileCountText.text = discardPile.Count.ToString();
             if (energyCountText != null)
             {
-                var maxEnergyThisTurn = battlePhase == BattlePhase.InitialPrepare ? InitialPrepareEnergy : MaxEnergy;
+                var maxEnergyThisTurn = GetMaxEnergyThisTurn();
                 energyCountText.text = $"{currentEnergy}/{maxEnergyThisTurn}";
             }
 
