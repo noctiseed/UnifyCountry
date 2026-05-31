@@ -13,7 +13,6 @@ namespace UnifyCountry.UI
             CancelSkillCast();
             ResetSkillTargetHandlers();
             RebuildCardPortraitMap();
-            statusText = null;
             libraryCountText = null;
             drawPileCountText = null;
             energyCountText = null;
@@ -30,14 +29,6 @@ namespace UnifyCountry.UI
             var canvas = CreateCanvas();
             EnsureEventSystem();
             CreateBackground(canvas.transform);
-
-            var waves = CurrentWaves;
-            var waveCount = waves == null ? 0 : waves.Count;
-            var nextWaveLabel = waveCount == 0 ? "0 / 0" : $"{Mathf.Min(nextWaveIndex + 1, waveCount)} / {waveCount}";
-            var turnLabel = battlePhase == BattlePhase.InitialPrepare ? "准备阶段" : $"第 {turnNumber} 回合";
-            var status = CreateText(canvas.transform, $"第 {currentLevelIndex + 1} 关  |  {turnLabel}  |  下一波 {nextWaveLabel}", 22, TextAnchor.MiddleCenter, new Color(0.22f, 0.16f, 0.1f));
-            SetRect(status.rectTransform, new Vector2(0.18f, 0.91f), new Vector2(0.82f, 0.97f), Vector2.zero, Vector2.zero);
-            statusText = status;
 
             BuildRunMapButton(canvas.transform);
             BuildExitMenuButton(canvas.transform);
@@ -137,13 +128,6 @@ namespace UnifyCountry.UI
 
         private void RefreshHud()
         {
-            var waves = CurrentWaves;
-            var waveCount = waves == null ? 0 : waves.Count;
-            var nextWaveLabel = waveCount == 0 ? "0 / 0" : $"{Mathf.Min(nextWaveIndex + 1, waveCount)} / {waveCount}";
-            var turnLabel = battlePhase == BattlePhase.InitialPrepare ? "准备阶段" : $"第 {turnNumber} 回合";
-            if (statusText != null)
-                statusText.text = $"第 {currentLevelIndex + 1} 关  |  {turnLabel}  |  下一波 {nextWaveLabel}";
-
             if (libraryCountText != null)
                 libraryCountText.text = library.Count.ToString();
             if (drawPileCountText != null)
