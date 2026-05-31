@@ -90,18 +90,28 @@ namespace UnifyCountry.UI
 
         private void TrackBossWave(WaveSpawnRecord wave, List<BattleUnit> spawnedUnits)
         {
-            if (wave == null || spawnedUnits == null || !IsBossWave(wave))
+            if (wave == null || spawnedUnits == null || (!IsBossWave(wave) && !HasBossUnit(spawnedUnits)))
                 return;
 
             activeBossRuntimeId = -1;
             activeBossDefeated = false;
+
+            foreach (var unit in spawnedUnits)
+            {
+                if (unit == null || unit.Camp != CardCamp.Enemy || unit.UnitType != UnitType.Boss)
+                    continue;
+
+                activeBossRuntimeId = unit.RuntimeId;
+                return;
+            }
+
             foreach (var unit in spawnedUnits)
             {
                 if (unit == null || unit.Camp != CardCamp.Enemy || unit.UnitType != UnitType.Hero)
                     continue;
 
                 activeBossRuntimeId = unit.RuntimeId;
-                break;
+                return;
             }
         }
 
@@ -110,6 +120,17 @@ namespace UnifyCountry.UI
             return wave != null
                 && !string.IsNullOrWhiteSpace(wave.NoteKey)
                 && wave.NoteKey.ToLowerInvariant().Contains("boss");
+        }
+
+        private static bool HasBossUnit(List<BattleUnit> units)
+        {
+            foreach (var unit in units)
+            {
+                if (unit != null && unit.Camp == CardCamp.Enemy && unit.UnitType == UnitType.Boss)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

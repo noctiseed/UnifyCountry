@@ -66,7 +66,16 @@ namespace UnifyCountry.UI
             if (card.CardType == CardType.Skill)
                 return skillCardColor;
 
-            return card.CardType == CardType.Unit && card.UnitType == UnitType.Hero ? heroCardColor : soldierCardColor;
+            if (card.CardType == CardType.Unit)
+            {
+                if (card.UnitType == UnitType.Boss)
+                    return bossCardColor;
+
+                if (card.UnitType == UnitType.Hero)
+                    return heroCardColor;
+            }
+
+            return soldierCardColor;
         }
 
         private void PlayCardFromHand(CardRecord card, RectTransform sourceRect)

@@ -12,7 +12,8 @@ namespace UnifyCountry.Config
     public enum UnitType
     {
         Hero,
-        Soldier
+        Soldier,
+        Boss
     }
 
     public enum CardType

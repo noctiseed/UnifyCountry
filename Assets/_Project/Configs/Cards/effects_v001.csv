@@ -8,6 +8,9 @@ EFFECT_CR_001,固守,BeforeDamaged,DamageCap,Self,4,0,HeroSkill|Wei,每次受到
 EFFECT_ZY_001,龙胆,OnTurnStart,GainArmor,Self,5,0,HeroSkill|Shu|Armor,每回合开始时获得5点护甲
 EFFECT_MC_001,铁骑横扫,OnAttack,ReplaceAttack,EnemyAllSameRow,2,0,HeroSkill|Shu|AreaAttack,攻击对方当前军的所有单位
 EFFECT_JY_001,论客,OnTurnStart,DrawCards,Self,1,0,HeroSkill|Shu|Draw,当该英雄存活在场上时，每回合额外抽1张牌
+EFFECT_ZL_001,人公固阵,OnPlay,FortifySameRowAndSelf,AllyAllSameRow,3,5,BossSkill|YellowTurban|Armor,登场时同排敌方单位获得3点护甲，张梁额外获得5点护甲
+EFFECT_ZB_001,地公妖火,OnPlay,ScorchEnemyRowAndShieldSelf,EnemyAllSameRow,3,1,BossSkill|YellowTurban|Burn|Shield,登场时对同排敌对单位施加3层灼烧，张宝自身获得1层护盾
+EFFECT_ZJ_001,太平要术,OnPlayAndTurnStart,TaipingDoctrine,EnemyAllSameRow,2,1,BossSkill|YellowTurban|Revival|Burn|Shield,登场时所有黄巾方单位获得2层复苏且张角自身获得2层护盾；每回合对当前排玩家单位施加1层灼烧
 EFFECT_PLAN_001,滚石,OnPlay,Damage,EnemySingle,3,0,Plan|Damage,对该单位造成3点伤害
 EFFECT_PLAN_002,齐射,OnPlay,Damage,EnemyRow,1,0,Plan|Damage|Area,对敌方当前军的所有单位造成1点伤害
 EFFECT_PLAN_003,疗伤,OnPlay,HealAndGainRevival,AllySingle,2,2,Plan|Heal|Buff,使该单位恢复2点生命，并获得2层复苏

@@ -62,6 +62,7 @@ namespace UnifyCountry.Combat
         public string Name => card.CardName;
         public string UnitId => card.UnitId;
         public UnitType UnitType => card.UnitType;
+        public string Faction => card.Faction;
         public int Attack => CurrentAttack;
         public int BaseAttack => card.Attack;
         public int MaxHp => maxHp;

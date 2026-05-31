@@ -112,6 +112,7 @@ namespace UnifyCountry.UI
             currentEnergy = maxEnergyThisTurn;
             var drawCount = DrawCardsWithCount(CardsDrawnPerTurn);
             logLines.Add($"进入第 {turnNumber} 回合：敌方单位进场后暂不攻击，费用恢复到 {maxEnergyThisTurn}，从抽牌堆抽 {drawCount} 张牌。");
+            TriggerEnemyTurnStartEffects(logLines);
             TriggerPlayerTurnStartEffects(logLines);
         }
 
@@ -247,6 +248,11 @@ namespace UnifyCountry.UI
         private void TriggerPlayerTurnStartEffects(List<string> logLines)
         {
             battleEffectResolver.TriggerPlayerTurnStartEffects(logLines);
+        }
+
+        private void TriggerEnemyTurnStartEffects(List<string> logLines)
+        {
+            battleEffectResolver.TriggerEnemyTurnStartEffects(logLines);
         }
 
         private void TriggerPlayerTurnEndEffects(List<string> logLines)

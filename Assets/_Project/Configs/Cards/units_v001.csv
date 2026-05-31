@@ -4,11 +4,14 @@ CARD_002,UNIT_002,关羽,Hero,8,8,Duelist,Hero|Shu,EFFECT_GY_001
 CARD_003,UNIT_003,张飞,Hero,20,5,Guard,Hero|Shu|Thorns,EFFECT_ZF_002
 CARD_004,UNIT_004,盾牌兵,Soldier,8,2,Tank,Soldier|Guard,
 CARD_005,UNIT_005,弓箭手,Soldier,2,6,Ranged,Soldier|Backline,
-CARD_006,UNIT_006,曹操,Hero,8,5,Leader,Hero|Wei,EFFECT_CC_001
-CARD_007,UNIT_007,夏侯惇,Hero,7,6,Duelist,Hero|Wei,EFFECT_XHD_001
-CARD_008,UNIT_008,曹仁,Hero,7,5,Guard,Hero|Wei,EFFECT_CR_001
+CARD_006,UNIT_006,曹操,Boss,8,5,Leader,Boss|Wei,EFFECT_CC_001
+CARD_007,UNIT_007,夏侯惇,Boss,7,6,Duelist,Boss|Wei,EFFECT_XHD_001
+CARD_008,UNIT_008,曹仁,Boss,7,5,Guard,Boss|Wei,EFFECT_CR_001
 CARD_009,UNIT_009,刀兵,Soldier,6,4,Frontline,Soldier|Melee,
 CARD_010,UNIT_010,骑兵,Soldier,3,7,Assault,Soldier|Cavalry,
 CARD_011,UNIT_011,赵云,Hero,15,10,Guard,Hero|Shu|Armor,EFFECT_ZY_001
 CARD_012,UNIT_012,马超,Hero,9,2,Cleave,Hero|Shu|AreaAttack,EFFECT_MC_001
 CARD_013,UNIT_013,简雍,Hero,2,2,Support,Hero|Shu|Draw,EFFECT_JY_001
+CARD_014,UNIT_014,张梁,Boss,25,3,Guard,Boss|YellowTurban|Guard|Defense,EFFECT_ZL_001
+CARD_015,UNIT_015,张宝,Boss,10,3,Caster,Boss|YellowTurban|Caster|Burn,EFFECT_ZB_001
+CARD_016,UNIT_016,张角,Boss,40,3,Leader,Boss|YellowTurban|Leader|Revival|Burn|Pressure,EFFECT_ZJ_001

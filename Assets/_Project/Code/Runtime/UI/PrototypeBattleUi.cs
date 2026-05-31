@@ -46,6 +46,7 @@ namespace UnifyCountry.UI
         private readonly Color handPanelColor = new Color(0.99f, 0.94f, 0.72f);
         private readonly Color heroCardColor = new Color(1f, 0.82f, 0.36f);
         private readonly Color soldierCardColor = new Color(0.66f, 0.88f, 1f);
+        private readonly Color bossCardColor = new Color(0.72f, 0.2f, 0.18f);
         private readonly Color enemyCardColor = new Color(1f, 0.56f, 0.5f);
         private Sprite roundedButtonSprite;
         private const int MaxFormationSlots = BattleFormation.MaxFormationSlots;

@@ -102,11 +102,14 @@ effects_v001.csv
 
 `CardRecord` 会读取卡牌通用信息，并通过 `card_id` 合并 `UnitRecord` 和 `EffectRecord`。
 
+`unit_type` 当前支持 `Soldier`、`Hero` 和 `Boss`。Boss 仍属于 `CardType.Unit`，通过 `camp = Enemy` 与玩家版本同名角色区分，并可拥有独立属性、技能和战斗结算逻辑。
+
 `BattleUnit` 在运行时持有独立阵营。普通兵种卡在配置中使用 `Neutral` 阵营作为共享模板：玩家上阵时生成 `Player` 阵营单位，敌方波次生成时生成 `Enemy` 阵营单位；英雄和计谋牌仍以卡牌表中的 `camp` 作为归属限制。
 
 当前支持的触发时机：
 
 - `OnPlay`：单位上阵或敌方波次生成时触发。
+- `OnPlayAndTurnStart`：复合时机，单位上阵或敌方波次生成时触发一次，随后每个正式回合开始时继续触发；当前用于张角「太平要术」。
 - `OnAttack`：单位攻击时触发。
 - `BeforeDamaged`：单位受伤前触发，用于伤害修正。
 - `OnDamaged`：单位受伤后触发。普通攻击、英雄技能伤害和计谋牌伤害都会触发；只有实际扣除生命且目标受击后仍存活时才触发，直接死亡不触发。
@@ -119,6 +122,9 @@ effects_v001.csv
 - `BuffAttack`
 - `GainShield`：增加护盾层数，每层护盾可抵挡一次敌方攻击。
 - `GainArmor`：增加护甲点数，每点护甲可抵挡 1 点敌方攻击伤害，抵挡后消耗。
+- `FortifySameRowAndSelf`：复合护甲效果，按目标规则给一组单位增加护甲，并给施放者额外增加护甲；当前用于张梁「人公固阵」。
+- `ScorchEnemyRowAndShieldSelf`：复合灼烧效果，按目标规则给一组敌对单位施加灼烧，并给施放者护盾；当前用于张宝「地公妖火」。
+- `TaipingDoctrine`：复合 Boss 效果，登场时给同阵营存活单位复苏并给施放者护盾，之后每回合按目标规则施加灼烧；当前用于张角「太平要术」。
 - `Damage`
 - `BonusDamage`
 - `ReplaceAttack`

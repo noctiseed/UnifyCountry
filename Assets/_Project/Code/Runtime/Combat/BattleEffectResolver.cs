@@ -139,6 +139,20 @@ namespace UnifyCountry.Combat
             }
         }
 
+        public void TriggerEnemyTurnStartEffects(List<string> logLines)
+        {
+            for (var row = 0; row < BattleFormation.FormationRows; row++)
+            {
+                foreach (var unit in formation.GetAliveEnemyUnitsInRow(row))
+                {
+                    if (unit == null || unit.IsDead)
+                        continue;
+
+                    TriggerEffects(unit, "OnTurnStart", row, null, logLines);
+                }
+            }
+        }
+
         public void TriggerPlayerTurnEndEffects(List<string> logLines)
         {
             for (var row = 0; row < BattleFormation.FormationRows; row++)
@@ -161,10 +175,10 @@ namespace UnifyCountry.Combat
 
             foreach (var effect in source.Effects)
             {
-                if (effect.Timing != timing)
+                if (!MatchesTiming(effect.Timing, timing))
                     continue;
 
-                ResolveEffect(source, effect, row, currentTarget, logLines);
+                ResolveEffect(source, effect, timing, row, currentTarget, logLines);
             }
         }
 
@@ -397,7 +411,7 @@ namespace UnifyCountry.Combat
             DealDamage(null, source, thornsDamage, row, logLines, $"{target.Name} 的荆棘反伤 {source.Name}", true);
         }
 
-        private void ResolveEffect(BattleUnit source, EffectRecord effect, int row, BattleUnit currentTarget, List<string> logLines)
+        private void ResolveEffect(BattleUnit source, EffectRecord effect, string activeTiming, int row, BattleUnit currentTarget, List<string> logLines)
         {
             switch (effect.EffectType)
             {
@@ -435,6 +449,47 @@ namespace UnifyCountry.Combat
                     {
                         target.AddArmor(effect.Value);
                         logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 点护甲。");
+                    }
+                    break;
+                case "FortifySameRowAndSelf":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        target.AddArmor(effect.Value);
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 点护甲。");
+                    }
+
+                    source.AddArmor(effect.SecondaryValue);
+                    logLines.Add($"{source.Name} 触发「{effect.EffectName}」，自身额外获得 {effect.SecondaryValue} 点护甲。");
+                    break;
+                case "ScorchEnemyRowAndShieldSelf":
+                    foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                    {
+                        target.AddBurn(effect.Value);
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 层灼烧。");
+                    }
+
+                    source.AddShield(effect.SecondaryValue);
+                    logLines.Add($"{source.Name} 触发「{effect.EffectName}」，自身获得 {effect.SecondaryValue} 层护盾。");
+                    break;
+                case "TaipingDoctrine":
+                    if (activeTiming == "OnPlay")
+                    {
+                        foreach (var target in ResolveAliveUnits(source.Camp))
+                        {
+                            target.AddRevival(effect.Value);
+                            logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.Value} 层复苏。");
+                        }
+
+                        source.AddShield(effect.Value);
+                        logLines.Add($"{source.Name} 触发「{effect.EffectName}」，自身获得 {effect.Value} 层护盾。");
+                    }
+                    else if (activeTiming == "OnTurnStart")
+                    {
+                        foreach (var target in ResolveTargets(source, effect.TargetRule, row, currentTarget))
+                        {
+                            target.AddBurn(effect.SecondaryValue);
+                            logLines.Add($"{source.Name} 触发「{effect.EffectName}」，{target.Name} 获得 {effect.SecondaryValue} 层灼烧。");
+                        }
                     }
                     break;
                 case "GainBurn":
@@ -516,6 +571,30 @@ namespace UnifyCountry.Combat
                 default:
                     AddTarget(targets, currentTarget);
                     break;
+            }
+
+            return targets;
+        }
+
+        private static bool MatchesTiming(string configuredTiming, string activeTiming)
+        {
+            if (configuredTiming == activeTiming)
+                return true;
+
+            return configuredTiming == "OnPlayAndTurnStart"
+                && (activeTiming == "OnPlay" || activeTiming == "OnTurnStart");
+        }
+
+        private List<BattleUnit> ResolveAliveUnits(CardCamp camp)
+        {
+            var targets = new List<BattleUnit>();
+            var units = camp == CardCamp.Player ? state.PlayerUnits : state.EnemyUnits;
+            foreach (var unit in units)
+            {
+                if (unit == null || unit.IsDead || unit.Camp != camp)
+                    continue;
+
+                AddTarget(targets, unit);
             }
 
             return targets;
