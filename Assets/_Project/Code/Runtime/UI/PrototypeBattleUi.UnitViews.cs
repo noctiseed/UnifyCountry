@@ -10,16 +10,25 @@ namespace UnifyCountry.UI
     {
         private RectTransform CreateUnitToken(Transform parent, BattleUnit unit, bool compact)
         {
-            var hasSprite = TryGetUnitSprite(unit, out var unitSprite);
-            var root = CreateImage(parent, unit.Name, hasSprite ? new Color(1f, 1f, 1f, 0f) : unit.Camp == CardCamp.Enemy ? enemyCardColor : heroCardColor);
-            if (!hasSprite)
+            var hasModel = TryGetUnitModel(unit, out var unitModel);
+            Sprite unitSprite = null;
+            var hasSprite = !hasModel && TryGetUnitSprite(unit, out unitSprite);
+            var hasVisual = hasModel || hasSprite;
+            var root = CreateImage(parent, unit.Name, hasVisual ? new Color(1f, 1f, 1f, 0f) : unit.Camp == CardCamp.Enemy ? enemyCardColor : heroCardColor);
+            if (!hasVisual)
                 root.gameObject.AddComponent<Outline>().effectColor = new Color(0.22f, 0.16f, 0.1f);
 
             var shadow = root.gameObject.AddComponent<Shadow>();
             shadow.effectColor = new Color(0.08f, 0.05f, 0.03f, 0.45f);
             shadow.effectDistance = new Vector2(6f, -8f);
 
-            if (hasSprite)
+            if (hasModel)
+            {
+                var modelPreview = CreateUnitModelPreview(root.transform, ShouldMirrorEnemyUnitSprite(unit));
+                modelPreview.Initialize(unitModel, modelPreview.GetComponent<RawImage>(), ShouldMirrorEnemyUnitSprite(unit));
+                SetRect(modelPreview.GetComponent<RectTransform>(), new Vector2(-0.08f, 0.08f), new Vector2(1.08f, 1.14f), Vector2.zero, Vector2.zero);
+            }
+            else if (hasSprite)
             {
                 var spriteImage = CreateUnitSpriteImage(root.transform, ShouldMirrorEnemyUnitSprite(unit));
                 spriteImage.sprite = unitSprite;
@@ -28,26 +37,26 @@ namespace UnifyCountry.UI
                 spriteImage.raycastTarget = false;
             }
 
-            var textColor = hasSprite ? Color.white : new Color(0.12f, 0.08f, 0.05f);
+            var textColor = hasVisual ? Color.white : new Color(0.12f, 0.08f, 0.05f);
             var name = CreateText(root.transform, unit.Name, compact ? 15 : 16, TextAnchor.MiddleCenter, textColor);
-            SetRect(name.rectTransform, hasSprite ? new Vector2(-0.06f, 0.96f) : new Vector2(0.02f, 0.92f), hasSprite ? new Vector2(1.06f, 1.12f) : new Vector2(0.98f, 1.08f), Vector2.zero, Vector2.zero);
-            if (hasSprite)
+            SetRect(name.rectTransform, hasVisual ? new Vector2(-0.06f, 0.96f) : new Vector2(0.02f, 0.92f), hasVisual ? new Vector2(1.06f, 1.12f) : new Vector2(0.98f, 1.08f), Vector2.zero, Vector2.zero);
+            if (hasVisual)
                 name.gameObject.AddComponent<Outline>().effectColor = new Color(0.12f, 0.06f, 0.04f, 0.9f);
 
-            CreateUnitAttackIcon(root.transform, unit, hasSprite, compact);
+            CreateUnitAttackIcon(root.transform, unit, hasVisual, compact);
 
             var statusText = GetUnitStatusText(unit);
             if (!string.IsNullOrEmpty(statusText))
             {
-                var status = CreateText(root.transform, statusText, compact ? 12 : 13, TextAnchor.MiddleCenter, hasSprite ? Color.white : new Color(0.08f, 0.2f, 0.34f));
-                var statusMinX = hasSprite ? 0.3f : 0.32f;
-                SetRect(status.rectTransform, hasSprite ? new Vector2(statusMinX, 0.2f) : new Vector2(statusMinX, 0.22f), hasSprite ? new Vector2(1.08f, 0.34f) : new Vector2(1f, 0.36f), Vector2.zero, Vector2.zero);
-                if (hasSprite)
+                var status = CreateText(root.transform, statusText, compact ? 12 : 13, TextAnchor.MiddleCenter, hasVisual ? Color.white : new Color(0.08f, 0.2f, 0.34f));
+                var statusMinX = hasVisual ? 0.3f : 0.32f;
+                SetRect(status.rectTransform, hasVisual ? new Vector2(statusMinX, 0.2f) : new Vector2(statusMinX, 0.22f), hasVisual ? new Vector2(1.08f, 0.34f) : new Vector2(1f, 0.36f), Vector2.zero, Vector2.zero);
+                if (hasVisual)
                     status.gameObject.AddComponent<Outline>().effectColor = new Color(0.04f, 0.1f, 0.18f, 0.9f);
             }
 
             CreateHealthBar(root.transform, unit.CurrentHp, unit.MaxHp, new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.18f));
-            CreateUnitDefenseBuffIcons(root.transform, unit, hasSprite);
+            CreateUnitDefenseBuffIcons(root.transform, unit, hasVisual);
 
             return root.rectTransform;
         }
@@ -88,6 +97,19 @@ namespace UnifyCountry.UI
         private static bool ShouldMirrorEnemyUnitSprite(BattleUnit unit)
         {
             return unit != null && unit.Camp == CardCamp.Enemy;
+        }
+
+        private UnitModelPreview CreateUnitModelPreview(Transform parent, bool mirrorX)
+        {
+            var gameObject = new GameObject("Unit Model Preview", typeof(RectTransform), typeof(RawImage), typeof(UnitModelPreview));
+            gameObject.transform.SetParent(parent, false);
+
+            var image = gameObject.GetComponent<RawImage>();
+            image.color = Color.white;
+            image.raycastTarget = false;
+            image.uvRect = mirrorX ? new Rect(1f, 0f, -1f, 1f) : new Rect(0f, 0f, 1f, 1f);
+
+            return gameObject.GetComponent<UnitModelPreview>();
         }
 
         private UnitSpriteImage CreateUnitSpriteImage(Transform parent, bool mirrorX)

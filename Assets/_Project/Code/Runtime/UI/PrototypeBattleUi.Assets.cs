@@ -51,6 +51,18 @@ namespace UnifyCountry.UI
 #endif
         }
 
+        private bool TryGetUnitModel(BattleUnit unit, out GameObject modelPrefab)
+        {
+#if UNITY_EDITOR
+            modelPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                $"Assets/_Project/Art/Units/Models/{unit.UnitId}.glb");
+            return modelPrefab != null;
+#else
+            modelPrefab = null;
+            return false;
+#endif
+        }
+
         private bool TryGetAttackIconSprite(out Sprite sprite)
         {
             if (attackIconSprite != null)

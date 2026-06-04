@@ -18,8 +18,10 @@ namespace UnifyCountry.UI
         private static readonly Color PaperShadow = new Color(0.46f, 0.22f, 0.05f);
         private static readonly Color WoodColor = new Color(0.63f, 0.19f, 0.06f);
         private static readonly Color GoldColor = new Color(0.82f, 0.61f, 0.25f);
+        private const string DefaultBackgroundPath = "Assets/_Project/Art/UI/Backgrounds/MainMenu/BG_MainMenu_Default.png";
 
         [SerializeField] private Font uiFont;
+        [SerializeField] private Sprite backgroundSprite;
 
         private Canvas canvas;
         private Sprite roundedSprite;
@@ -123,6 +125,15 @@ namespace UnifyCountry.UI
 
         private void BuildBackground(Transform parent)
         {
+            if (TryGetBackgroundSprite(out var sprite))
+            {
+                var background = CreateImage(parent, "Main Menu Background", Color.white);
+                background.sprite = sprite;
+                background.preserveAspect = false;
+                SetCoverRect(background.rectTransform, sprite);
+                return;
+            }
+
             var top = CreateImage(parent, "Sky Wash", BackgroundTop);
             SetRect(top.rectTransform, new Vector2(0f, 0.48f), Vector2.one, Vector2.zero, Vector2.zero);
 
@@ -138,6 +149,23 @@ namespace UnifyCountry.UI
         {
             var band = CreateImage(parent, name, color);
             SetRect(band.rectTransform, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
+        }
+
+        private bool TryGetBackgroundSprite(out Sprite sprite)
+        {
+            if (backgroundSprite != null)
+            {
+                sprite = backgroundSprite;
+                return true;
+            }
+
+#if UNITY_EDITOR
+            sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(DefaultBackgroundPath);
+            return sprite != null;
+#else
+            sprite = null;
+            return false;
+#endif
         }
 
         private void BuildScrollBoard(Transform parent)
@@ -312,6 +340,19 @@ namespace UnifyCountry.UI
             rect.anchorMax = anchorMax;
             rect.offsetMin = offsetMin;
             rect.offsetMax = offsetMax;
+        }
+
+        private static void SetCoverRect(RectTransform rect, Sprite sprite)
+        {
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = Vector2.zero;
+
+            var fitter = rect.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fitter.aspectRatio = sprite.rect.width / sprite.rect.height;
         }
 
         private static void AddShadow(GameObject target, Color color, Vector2 distance)
